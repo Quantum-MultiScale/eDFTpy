@@ -598,13 +598,19 @@ class DriverMM(DriverKS):
         self.init_density(**kwargs)
 
     @print2file()
-    def init_density(self, rho_ini = None, density_initial = None, sigma = 0.6, rcut = 10.0, **kwargs):
-        parain = open('para.inp','r').readlines()[0].split()
-
-        parain1 = float(parain[0])
-        parain2 = float(parain[1])
-        parain3 = float(parain[2])
-        parain4 = float(parain[3])
+    def init_density(self, rho_ini = None, density_initial = None, sigma = 0.6, rcut = 1000.0, **kwargs):
+        from os.path import exists
+        if exists('para.inp'):
+           parain = open('para.inp','r').readlines()[0].split()
+           parain1 = float(parain[0])
+           parain2 = float(parain[1])
+           parain3 = float(parain[2])
+           parain4 = float(parain[3])
+        else:
+           parain1 =  0.85
+           parain2 =  0.305
+           parain3 =  0.85
+           parain4 =  0.305
         print(parain)
 
         if self.grid_driver is not None :
@@ -653,6 +659,19 @@ class DriverMM(DriverKS):
 
 
         #wall density for push the QM electron density out
+        
+        if exists('sigma.inp'):
+           parain = open('sigma.inp','r').readlines()[0].split()
+           sigma_neg  = float(parain[1])
+           sigma_pos  = float(parain[2])
+           scale_neg  = float(parain[3]) 
+           scale_pos  = float(parain[4])
+        else:
+           sigma_neg  = 0.5
+           sigma_pos  = 0.2
+           scale_neg  = 2.5
+           scale_pos  = 0.5
+
         self.density_charge_wall_sub = Field(grid = self.grid_sub, rank=self.nspin)
         self.density_charge_wall_sub[:] = 0.0
         pos_m, inds_m, inds_o = self.engine.get_m_sites()
@@ -680,11 +699,13 @@ class DriverMM(DriverKS):
                 self.density_charge_mo_sub = build_pseudo_density(p, self.grid_sub, scale = c, sigma = sigma2, rcut = rcut,
                         density = self.density_charge_mo_sub, add = True, deriv = 0)
                 if(c<0.01):
-                    self.density_charge_wall_sub = build_pseudo_density(p, self.grid_sub, scale = 5.0 , sigma = 0.7, rcut = rcut,
+                    #self.density_charge_wall_sub = build_pseudo_density(p, self.grid_sub, scale = 5.0 , sigma = 0.7, rcut = rcut,
+                    self.density_charge_wall_sub = build_pseudo_density(p, self.grid_sub, scale = scale_neg , sigma = sigma_neg, rcut = rcut,
                         density = self.density_charge_wall_sub, add = True, deriv = 0)
                 else:
                     # 0.5, 0.1
-                    self.density_charge_wall_sub = build_pseudo_density(p, self.grid_sub, scale = 1.0, sigma = 0.2, rcut = rcut,
+                    #self.density_charge_wall_sub = build_pseudo_density(p, self.grid_sub, scale = 1.0, sigma = 0.2, rcut = rcut,
+                    self.density_charge_wall_sub = build_pseudo_density(p, self.grid_sub, scale = scale_pos, sigma = sigma_pos, rcut = rcut,
                         density = self.density_charge_wall_sub, add = True, deriv = 0)
 
         else :
@@ -708,23 +729,23 @@ class DriverMM(DriverKS):
 
     @print2file()
     def get_energy(self, olevel = 0, **kwargs):
-        '''
-            def get_energy(self, olevel = 0, sdft = 'sdft', **kwargs):
-                if olevel == 0 :
-                    # Here, we directly use saved density
-                    if sdft == 'pdft' :
-                        extpot = self.evaluator.embed_potential
-                        extpot = self.get_extpot(extpot, mapping = True)
-                    else :
-                        extpot = self.get_extpot()
-                    self.engine.set_extpot(extpot)
-                    energy = self.engine.get_energy(olevel = olevel) * self.engine.units['energy']
-                else :
-                    energy = 0.0
-                return energy
-
-
-        '''
+        #'''
+        #    def get_energy(self, olevel = 0, sdft = 'sdft', **kwargs):
+        #        if olevel == 0 :
+        #            # Here, we directly use saved density
+        #            if sdft == 'pdft' :
+        #                extpot = self.evaluator.embed_potential
+        #                extpot = self.get_extpot(extpot, mapping = True)
+        #            else :
+        #                extpot = self.get_extpot()
+        #            self.engine.set_extpot(extpot)
+        #            energy = self.engine.get_energy(olevel = olevel) * self.engine.units['energy']
+        #        else :
+        #            energy = 0.0
+        #        return energy
+        
+        
+        #'''
         if olevel == 0 :
             energy = self.engine.get_energy(olevel = olevel) * self.engine.units['energy']
         else :
@@ -756,7 +777,7 @@ class DriverMM(DriverKS):
         return func
 
     @print2file()
-    def get_density(self, rcut = 10, sigma = 1.4, **kwargs):
+    def get_density(self, rcut = 1000, sigma = 1.4, **kwargs):
         #
         #-----------------------------------------------------------------------
         # if self.comm.rank == 0 :
@@ -767,12 +788,18 @@ class DriverMM(DriverKS):
         #-----------------------------------------------------------------------
         import time
         start_time = time.time()
-
-        parain = open('para.inp','r').readlines()[0].split()
-        sigmaO  = float(parain[4]) # O
-        sigmaH  = float(parain[5]) # H
-        DP_pen_O  = float(parain[6]) # O 18
-        DP_pen_H  = float(parain[7]) # H 36
+        from os.path import exists
+        if exists('para.inp'):
+          parain = open('para.inp','r').readlines()[0].split()
+          sigmaO  = float(parain[4]) # O
+          sigmaH  = float(parain[5]) # H
+          DP_pen_O  = float(parain[6]) # O 18
+          DP_pen_H  = float(parain[7]) # H 36
+        else:
+          sigmaO  = 1.60 
+          sigmaH  = 1.60
+          DP_pen_O  =  7.5
+          DP_pen_H  =  7.5
         print('param',sigmaO,sigmaH)
         #sigma = parain
         # Xin chen modified. only electrostatic potential to MM part
@@ -868,7 +895,8 @@ class DriverMM(DriverKS):
             else :
                 sigma = sigmaH  # 0.92
             #sprint("sigma,charge",sigma,charge,c ,comm = self.comm)
-            self.density_sub   = build_pseudo_density(p, self.grid_sub, scale  = c, sigma = sigma, rcut =sigma*4,
+            #self.density_sub   = build_pseudo_density(p, self.grid_sub, scale  = c, sigma = sigma, rcut =sigma*4,
+            self.density_sub   = build_pseudo_density(p, self.grid_sub, scale  = c, sigma = sigma, rcut = rcut,
                     density = self.density_sub, add = True, deriv = 1)
             # For QM induced dipoles. 
             #self.qm_induced_dm = build_pseudo_density(p, self.grid_sub, scale = c0, sigma = sigma, rcut = sigma*4,
@@ -899,7 +927,7 @@ class DriverMM(DriverKS):
         return self.density
 
     @print2file()
-    def get_density_v0(self, rcut = 10, sigma = 0.6, **kwargs):
+    def get_density_v0(self, rcut = 1000, sigma = 0.6, **kwargs):
         charges, positions_c = self.engine.get_charges()
         charges = self.engine.get_points_zval() - charges
         dipoles, positions_d = self.engine.get_dipoles()

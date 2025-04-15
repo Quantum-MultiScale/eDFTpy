@@ -238,6 +238,32 @@ class TotalEvaluator(Evaluator):
         self.static_potential = None
         self.embed_energydensity= None
         self.external_potential = {}
+        self.wall_potential = None # jezs
+
+    def get_wall_potential(self, rho, wall_density = None, with_global = False, embed_keys = [], calcType = ['V'], **kwargs):
+        self.wall_potential = None
+        if not embed_keys : embed_keys = self.embed_key
+        key = 'KE' if hasattr(self, 'KE') else None
+        if key is not None :
+          func = getattr(self, key)
+          remove_global = {key : func}
+          if wall_density is not None :
+            obj_global = func(rho + wall_density, calcType = calcType, **kwargs) # compute KE
+          else :
+            obj_global = func(rho, calcType = calcType, **kwargs) # compute KE
+          self.wall_potential = obj_global.potential 
+        if not with_global :
+            for key in self.funcdicts:
+                if key not in embed_keys :
+                    remove_global[key] = self.funcdicts[key]
+        self.update_functional(remove = remove_global) # remove all less XC
+        obj_global = self.compute(rho, calcType = calcType, **kwargs) # compute XC
+
+        if self.wall_potential is None :
+            self.wall_potential = obj_global.potential
+        else :
+            self.wall_potential += obj_global.potential
+        self.update_functional(add = remove_global)
 
     def get_embed_potential(self, rho, gaussian_density = None, embed_keys = [], with_global = True, calcType = ['V'], **kwargs):
         self.embed_potential = None

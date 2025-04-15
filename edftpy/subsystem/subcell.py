@@ -243,6 +243,7 @@ class GlobalCell(object):
         self._density = Field(grid=self.grid, rank=self.nspin, direct=True)
         self._gaussian_density = Field(grid=self.grid, rank=1, direct=True)
         self._core_density = Field(grid=self.grid, rank=1, direct=True)
+        self._density_charge_wall = Field(grid = self.grid, rank=1, direct=True) #jezs
 
     @property
     def ions_index(self):
@@ -278,6 +279,14 @@ class GlobalCell(object):
     def core_density(self, value):
         self._core_density[:] = value
 
+    @property #jezs
+    def density_charge_wall(self):
+        return self._density_charge_wall
+
+    @density_charge_wall.setter  #jezs
+    def density_charge_wall(self,value):
+         self._density_charge_wall[:] = value
+
     @property
     def total_evaluator(self):
         if self._total_evaluator is None:
@@ -307,9 +316,11 @@ class GlobalCell(object):
         grid = Grid(lattice=lattice, nr=nr, full=full, direct = True, mp = mp, **kwargs)
         return grid
 
-    def update_density(self, subrho, isub = None, grid = None, fake = False, core = False, overwrite = False, **kwargs):
+    def update_density(self, subrho, isub = None, grid = None, fake = False, wall = False, core = False, overwrite = False, **kwargs):
         if fake :
             total = self._gaussian_density
+        elif wall :
+            total = self._density_charge_wall
         elif core :
             total = self._core_density
         else :
