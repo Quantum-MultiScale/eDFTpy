@@ -196,7 +196,7 @@ class EngineMBX(Engine):
            parain = open('sigma.inp','r').readlines()[0].split()
            sigma_grid  = float(parain[0])
         else:
-           sigma_grid  = 0.25
+           sigma_grid  = 0.6
         sprint('Sigma Extpot:', sigma_grid)
 
         pot = self.get_value_at_points(extpot, self.points_mm).ravel()

@@ -667,10 +667,10 @@ class DriverMM(DriverKS):
            scale_neg  = float(parain[3]) 
            scale_pos  = float(parain[4])
         else:
-           sigma_neg  = 0.5
-           sigma_pos  = 0.2
-           scale_neg  = 2.5
-           scale_pos  = 0.5
+           sigma_neg  = 1.0
+           sigma_pos  = 1.0
+           scale_neg  = 1.0
+           scale_pos  = 0.2
 
         self.density_charge_wall_sub = Field(grid = self.grid_sub, rank=self.nspin)
         self.density_charge_wall_sub[:] = 0.0
@@ -883,7 +883,7 @@ class DriverMM(DriverKS):
 
         time3 = time.time()
         # sqrt is ignored. 
-        self.MMpenalty_energy = np.sum(Dp_length)/627.51 #### Here
+        self.MMpenalty_energy = np.sum(Dp_length)*3.82/627.51 #### Here
         sprint("MM distorsion energy (Hartree):",self.MMpenalty_energy,comm = self.comm)
         #-----------------------------------------------------------------------
         self.qm_induced_dm = Field(grid = self.grid_sub, rank=self.nspin)
