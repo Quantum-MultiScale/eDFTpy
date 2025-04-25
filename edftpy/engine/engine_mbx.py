@@ -73,9 +73,18 @@ class EngineMBX(Engine):
             print("e2_mbx",e_mbx2, self.e2, e_mbx2-self.e2)
             sprint('mbx -> energies', energy, e2, energy - e2, comm = self.comm)
             energy = energy - e2
+            #energy = energy - e_mbx2
         else :
             energy = 0.0
         return energy
+
+    def get_polarizabilities(self, olevel = 0, **kwargs):
+        if olevel == 0 : 
+            pol = mbx.get_polarizabilities(self.npoints)
+            sprint("Pol: ", pol, comm = self.comm)
+        else:
+            pol = 0.0 
+        return pol 
 
     @print2file()
     def initial(self, inputfile = 'mbx.json', comm=None, **kwargs):

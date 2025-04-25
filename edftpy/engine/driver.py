@@ -682,6 +682,7 @@ class DriverMM(DriverKS):
         if len(inds_m) > 0 :
             dipoles, positions_d = self.engine.get_dipoles()
             # Get original dipole length (inner MM zone)
+            #dipoles = np.zeros_like(dipoles)   #SET UP DIPOLES ZERO!
             self.MM_dp0 =dipoles
             if self.comm.size > 1 :
                 positions_d = self.comm.bcast(positions_d, root = 0)
@@ -837,23 +838,32 @@ class DriverMM(DriverKS):
         dipoles, positions_d = self.engine.get_dipoles()
         charges, positions_c = self.engine.get_charges()
         charges = self.engine.get_points_zval() - charges
+        polarizabilities = self.engine.get_polarizabilities()
+
+        #dipoles = np.zeros_like(dipoles)   #SET UP DIPOLES ZERO!
+        #dipoles = self.MM_dp0  #Let dipoles cte!
 
         #sprint('dipoles0 :\n', dipoles, comm = self.comm)
         positions_d = positions_d*self.engine.units['length']
         dipoles = dipoles*self.engine.units['length']
+        polarizabilities = np.asarray(polarizabilities) * 1/(self.engine.units['Bohr']**3)  #A**3 to a.u.**3
+        sprint("Polarizability: ", polarizabilities,comm = self.comm)
+        pol_corr = np.sum(polarizabilities[0:3])/3
+        sprint("Pol Correction: ", pol_corr,comm = self.comm)
 
         time2 = time.time()
         #-----------------------------------------------------------------------
         if self.comm.size > 1 :
             dipoles = self.comm.bcast(dipoles, root = 0)
             positions_d = self.comm.bcast(positions_d, root = 0)
+
         # dip = np.loadtxt('edftpy_mm_dipole.txt').reshape((-1,3))
         # dipoles[:3] = dip[:3]
         # dipoles[:] = 0.0
         #sprint('dipoles :\n', dipoles, comm = self.comm)
         # Get updated dipole (induced by QM and MM part)
         self.QMMM_dp =dipoles
-        #self.QMMM_dp = self.MM_dp0
+        #self.QMMM_dp = self.MM_dp0   #init dipoles
 
         sprint('dipolesd :\n', dipoles-self.MM_dp0, comm = self.comm)
 
@@ -864,27 +874,50 @@ class DriverMM(DriverKS):
         Dp_length1 = (self.QMMM_dp[:,0] - self.MM_dp0[:,0])**2+\
                      (self.QMMM_dp[:,1] - self.MM_dp0[:,1])**2+\
                      (self.QMMM_dp[:,2] - self.MM_dp0[:,2])**2
-        sprint('O dipoles_length :\n', Dp_length1, comm = self.comm)
+        sprint('Dipoles_length :\n', Dp_length1, comm = self.comm)
+
+        Dp_lengthp = (self.QMMM_dp[:,0])**2 - (self.MM_dp0[:,0])**2+\
+                     (self.QMMM_dp[:,1])**2 - (self.MM_dp0[:,1])**2+\
+                     (self.QMMM_dp[:,2])**2 - (self.MM_dp0[:,2])**2
+        sprint('Dipoles pol length: \n', Dp_lengthp, comm = self.comm)
+
+        sprint('Dipoles_induced: \n', self.QMMM_dp, comm = self.comm)
+        sprint('Dipoles initial: \n', self.MM_dp0, comm = self.comm)
 
         Dp_length = Dp_length1*0.0
+        Dp_pol = Dp_lengthp*0.0
 
         Dp_length[::4]  = Dp_length1[::4]*DP_pen_O
         Dp_length[1::4] = Dp_length1[1::4]*DP_pen_H
         Dp_length[2::4] = Dp_length1[2::4]*DP_pen_H
 
+        Dp_pol[::4]  = (1/polarizabilities[0])*(Dp_lengthp[::4])  #O
+        Dp_pol[1::4] = (1/polarizabilities[1])*(Dp_lengthp[1::4]) #H
+        Dp_pol[2::4] = (1/polarizabilities[2])*(Dp_lengthp[2::4]) #H
+
         DP_len_O = Dp_length1[::4]
         DP_len_H = Dp_length1[1::4] + Dp_length1[2::4]
 
-        sprint('Total DP O:  ', np.sum(DP_len_O)/627.51, comm = self.comm)
-        sprint('Total DP H:  ', np.sum(DP_len_H)/627.51, comm = self.comm)
+        sprint('Total DP O:  ', np.sum(DP_len_O)/self.engine.units['kcal/mol'], comm = self.comm)
+        sprint('Total DP H:  ', np.sum(DP_len_H)/self.engine.units['kcal/mol'], comm = self.comm)
         
-
-        sprint('weighted dipoles :\n', Dp_length, comm = self.comm)
+        sprint('weighted dipoles penalty: \n', Dp_length, comm = self.comm)
+        sprint("weighted dipoles pol mbx: \n", Dp_pol, comm = self.comm)
 
         time3 = time.time()
         # sqrt is ignored. 
-        self.MMpenalty_energy = np.sum(Dp_length)*3.82/627.51 #### Here
-        sprint("MM distorsion energy (Hartree):",self.MMpenalty_energy,comm = self.comm)
+        penalty_itself = np.sum(Dp_length)/self.engine.units['kcal/mol']
+        penalty_corrected_factor = np.sum(Dp_length)*pol_corr/self.engine.units['kcal/mol']
+        pol_penalty_mbx = 1*np.sum(Dp_pol)*0.5
+
+        sprint("MM penalty energy (Hartree):", penalty_itself, comm = self.comm)
+        sprint("MM penalty energy (Hartree) x pol_corr:", penalty_corrected_factor, comm = self.comm)
+        sprint("MM distorsion energy (Hartree):",pol_penalty_mbx,comm = self.comm)
+
+        #self.MMpenalty_energy = penalty_corrected_factor
+        self.MMpenalty_energy = penalty_itself
+        #self.MMpenalty_energy = pol_penalty_mbx
+        #self.MMpenalty_energy = 0
         #-----------------------------------------------------------------------
         self.qm_induced_dm = Field(grid = self.grid_sub, rank=self.nspin)
         self.density_sub[:] = 0.0
@@ -908,15 +941,14 @@ class DriverMM(DriverKS):
         # Get response energy.
         #E_NAD = np.sum( (self.evaluator.global_potential/self.engine.units['energy'])     * self.qm_induced_dm)
         #E_ELE = np.sum( (self.evaluator.global_potential_ele/self.engine.units['energy']) * self.qm_induced_dm)
-       
+
         #print("time1   :", time1 - start_time )
         #print("time2   :", time2 - time1      )
         #print("time3   :", time3 - time2      )
         #print("time-tot:", time4 - time3      )
 
-        #print("NAD coulp.: ",E_NAD)
-        #print("ELE coulp.: ",E_ELE)
-        #self.qm_induced_dm.write('dp_mm0.xsf', ions = self.subcell.ions)
+        #sprint("NAD coulp.: ",E_NAD, comm = self.comm)
+        #sprint("ELE coulp.: ",E_ELE, comm = self.comm)
         #self.density_sub.write('dp_mm.xsf', ions = self.subcell.ions)
         # To remove dipole
         self.density_sub.gather(out = self.density, root = 0)
