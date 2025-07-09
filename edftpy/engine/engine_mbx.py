@@ -73,18 +73,17 @@ class EngineMBX(Engine):
             print("e2_mbx",e_mbx2, self.e2, e_mbx2-self.e2)
             sprint('mbx -> energies', energy, e2, energy - e2, comm = self.comm)
             energy = energy - e2
-            #energy = energy - e_mbx2
         else :
             energy = 0.0
         return energy
 
     def get_polarizabilities(self, olevel = 0, **kwargs):
-        if olevel == 0 : 
+        if olevel == 0 :
             pol = mbx.get_polarizabilities(self.npoints)
-            sprint("Pol: ", pol, comm = self.comm)
+            #sprint("Pol: ", pol, comm = self.comm)
         else:
-            pol = 0.0 
-        return pol 
+            pol = 0.0
+        return pol
 
     @print2file()
     def initial(self, inputfile = 'mbx.json', comm=None, **kwargs):
@@ -205,8 +204,8 @@ class EngineMBX(Engine):
            parain = open('sigma.inp','r').readlines()[0].split()
            sigma_grid  = float(parain[0])
         else:
-           sigma_grid  = 0.6
-        sprint('Sigma Extpot:', sigma_grid)
+           sigma_grid  = 0.30
+        sprint('Sigma Extpot:', sigma_grid, comm = self.comm)
 
         pot = self.get_value_at_points(extpot, self.points_mm).ravel()
         # extfield = extpot.gradient()
@@ -259,16 +258,24 @@ class EngineMBX(Engine):
 
         #potfield = potfield*screen
         #print("Max ele:", np.max(potfield), np.min(potfield))
-        mbx.set_potential_and_electric_field_on_sites(-pot, potfield+nadfield, units = 'au')
+        #mbx.set_potential_and_electric_field_on_sites(-pot, potfield+nadfield, units = 'au')
+        mbx.set_potential_and_electric_field_on_sites(-pot, potfield, units = 'au')
 
-        dipoles = mbx.get_induced_dipoles(self.npoints, units = 'au')
+        dipoles = mbx.get_induced_dipoles(self.npoints, units = 'au') #A.U. already!
+        #print("Dipoles au in engine: ", dipoles)
+        #dipoles_mbx = mbx.get_induced_dipoles(self.npoints, units = 'mbx')
+        #print("Dipoles MBX: ",dipoles_mbx)
         charges = mbx.get_charges(self.npoints, units = 'au')
         #print("[Dipole]",dipoles)
         #print("[POT]",pot)
         #print("[POT]",potfield)
-        E_ind = -np.sum(potfield*dipoles)*1.889723794595576*166.0320   # dipole*field (kcal/mol)
-        E_perm = -np.sum(pot*charges)*1.889723794595576*166.0320       # charge*pot (kcal/mol)
-        self.e2 =(E_ind+E_perm)/627.50947
+        #E_ind = -np.sum(potfield*dipoles)*1.889723794595576*166.0320   # dipole*field (kcal/mol)
+        #E_perm = -np.sum(pot*charges)*1.889723794595576*166.0320       # charge*pot (kcal/mol)
+        #self.e2 =(E_ind+E_perm)/627.50947
+        E_ind = -np.sum(potfield*dipoles)*0.5   # dipole*field (a.u.) #True for E_ind! 
+        E_perm = -np.sum(pot*charges)*0.5       # charge*pot (a.u.)
+        self.e2 =(E_ind+E_perm)
+
 
     def set_extpot_NAD(self, extpot = None, MMden=None, **kwargs):
         if self.comm.rank > 0 : return
@@ -277,9 +284,9 @@ class EngineMBX(Engine):
            parain = open('sigma.inp','r').readlines()[0].split()
            sigma_grid  = float(parain[0])
         else:
-           sigma_grid  = 0.25
+           sigma_grid  = 0.30
 
-        Grad_den = MMden.gradient(flag = 'supersmooth',sigma=sigma_grid) # Check no super, regular, sigma=0
+        Grad_den = MMden.gradient(flag = 'supersmooth',sigma=sigma_grid*0.5) # Check no super, regular, sigma=0
         dx = np.sum(Grad_den[0]*extpot)
         dy = np.sum(Grad_den[1]*extpot)
         dz = np.sum(Grad_den[2]*extpot)
@@ -294,7 +301,7 @@ class EngineMBX(Engine):
             ip = (np.rint(p*data.grid.nrR/data.grid.cell.lengths()[0:3])).astype('int32')
             ip = np.mod(ip, data.grid.nrR)
             if data.ndim > 3 :
-                sprint(i,p)
+                #sprint(i,p, comm = self.comm)
                 values[i] = data[:, ip[0], ip[1], ip[2]]
             else :
                 values[i] = data[ip[0], ip[1], ip[2]]

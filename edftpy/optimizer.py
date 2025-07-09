@@ -640,13 +640,17 @@ class Optimization(object):
         #-----------------------------------------------------------------------
         embed_keys = ['XC', 'KE']
         #1. XC,KE from [O+H sites + QM part]
-        self.gsystem_qmmm.total_evaluator.get_embed_potential(self.gsystem_qmmm.gaussian_density, embed_keys = embed_keys,
-                gaussian_density = self.gsystem.gaussian_density, with_global = False, calcType = ('V'))
+        self.gsystem_qmmm.total_evaluator.get_embed_potential(self.gsystem_qmmm.gaussian_density,
+                                                              embed_keys = embed_keys,
+                                                              with_global = False, calcType = ('V'),
+                                                              gaussian_density = self.gsystem.gaussian_density,
+                                                              )
+
         #2. Hartree+Pseudo from [M+H sites + QM part]
-        pot_qmmm = self.gsystem_qmmm.total_evaluator.get_total_functional(self.gsystem_qmmm.density, calcType = ('V'), embed_keys = embed_keys).potential
+        pot_qmmm = self.gsystem_qmmm.total_evaluator.get_total_functional(self.gsystem_qmmm.density,
+                                                      calcType = ('V'), embed_keys = embed_keys).potential
         #3. Total
         self.gsystem_qmmm.total_evaluator.embed_potential[:] += pot_qmmm
-        #self.gsystem_qmmm.total_evaluator.embed_potential[:] += self.gsystem_mm.density_charge_wall # add just the density
 
         #-----------------------------------------------------------------------
         #4. Give potentials above to QM part.
@@ -668,21 +672,24 @@ class Optimization(object):
 
         embed_keys = ['XC', 'KE']
         #5. What is the self.density,is it QM density? Calculate QM Hartree+Pseudo potential. 
-        pot_qm_ele = self.gsystem.total_evaluator.get_total_functional(self.density, calcType = ('V'), embed_keys = embed_keys).potential
-        # electrostatistic potential. 
+        pot_qm_ele = self.gsystem.total_evaluator.get_total_functional(self.gsystem.density, calcType = ('V'), embed_keys = embed_keys).potential
          
-        # Xin Chen added
-        self.gsystem.total_evaluator.get_embed_potential(self.gsystem.gaussian_density, embed_keys = embed_keys,
-                with_global = False, calcType = ('V'))
+        # Xin Chen added #Initializing the embedding potential for total gsystem
+        self.gsystem.total_evaluator.get_embed_potential(self.gsystem.gaussian_density,
+                                     embed_keys = embed_keys, with_global = False, calcType = ('V'))
 
-        self.gsystem.total_evaluator.get_embed_potential(self.gsystem_qmmm.gaussian_density, embed_keys = embed_keys,
-                                                              with_global = False, calcType = ('V'))
+        self.gsystem.total_evaluator.get_embed_potential(self.gsystem_qmmm.gaussian_density,
+                                     embed_keys = embed_keys, with_global = False, calcType = ('V'),
+                                     gaussian_density = self.gsystem.gaussian_density)
 
         # Xin Chen add. Compute the NAD potential from QM to MM:  V_{tot}^{NAD} - V_{MM^{NAD}
-        self.gsystem_mm.total_evaluator.get_embed_potential(self.gsystem_mm.gaussian_density, embed_keys = embed_keys, with_global = False, calcType = ('V'))
-        self.gsystem_qmmm.total_evaluator.get_embed_potential(self.gsystem_qmmm.gaussian_density, embed_keys = embed_keys,
-                gaussian_density = self.gsystem.gaussian_density, with_global = False, calcType = ('V'))
-        
+        self.gsystem_mm.total_evaluator.get_embed_potential(self.gsystem_mm.gaussian_density, 
+                       embed_keys = embed_keys, with_global = False, calcType = ('V'))
+
+        self.gsystem_qmmm.total_evaluator.get_embed_potential(self.gsystem_qmmm.gaussian_density,
+                       embed_keys = embed_keys, with_global = False, calcType = ('V'),
+                       gaussian_density = self.gsystem.gaussian_density)
+
         NADpotMM     = self.gsystem_mm.total_evaluator.embed_potential 
         NADpotTOT    = self.gsystem_qmmm.total_evaluator.embed_potential 
         subPOT       = NADpotTOT - NADpotMM 
@@ -707,19 +714,13 @@ class Optimization(object):
 
             if technique == 'MM' :
                 #6. Give potential to QM ????
-                #if(not driver is None):
-                #    print("If MM optimizer: ", isub, pot_qm.shape, driver.comm.rank)
-
                 self.gsystem.sub_value(pot_qm, global_potential, isub = isub)     # potential for energy calc.
                 self.gsystem.sub_value(pot_qm_ele, global_potential_ele, isub = isub) # potential for induce MM dipole.
 
-
         self.gsystem.total_evaluator.get_embed_potential(self.gsystem.density, embed_keys = embed_keys,
-                gaussian_density = self.gsystem.gaussian_density, with_global = False, calcType = ('V'))
-        #self.gsystem.total_evaluator.embed_potential.write('0_qmNADpot.xsf', ions = self.gsystem_qmmm.ions)
+                                                         gaussian_density = self.gsystem.gaussian_density,
+                                                         with_global = False, calcType = ('V'))
 
-
-        #subPOT.write('0_substract2.xsf', ions = self.gsystem_qmmm.ions)
         return
 
     def update_qmmm_density(self, **kwargs):
@@ -727,7 +728,7 @@ class Optimization(object):
             self.gsystem_mm.density[:] = 0.0
             self.gsystem_mm.core_density[:] = 0.0
             self.gsystem_mm.gaussian_density[:] = 0.0
-            self.gsystem_mm.density_charge_wall[:] = 0.0
+            self.gsystem_mm.density_charge_wall[:] = 0.0 #dipole density
             for i, driver in enumerate(self.drivers):
                 density = None if not hasattr(driver, 'density') else driver.density
                 core_density = None if not hasattr(driver, 'core_density') else driver.core_density
@@ -735,9 +736,10 @@ class Optimization(object):
                 density_charge_mo = None if not hasattr(driver, 'density_charge_mo') else driver.density_charge_mo
                 density_charge_wall = None if not hasattr(driver, 'density_charge_wall') else driver.density_charge_wall
                 if density is not None :
-                    if density_charge_mo is not None : density_charge_mo = density_charge_mo + density  #! update NAD density
-                    #if density_charge_mo is not None : density_charge_mo = density_charge_mo   #! Don't update density 
-                    if density_charge is not None : density_charge = density_charge + density
+                    if density_charge_mo is not None : density_charge_mo = density_charge_mo + density  #! update DD to NAD
+                    #if density_charge_mo is not None : density_charge_mo = density_charge_mo   #! Don't update DD to NAD
+                    if density_charge is not None : density_charge = density_charge + density #update DD to Hartree
+                    #if density_charge is not None : density_charge = density_charge # do not updated  DD to Hartree
                 technique = self._get_driver_technique(driver)
                 sprint('technique: ',technique)
                 if technique in ['MM'] :
@@ -746,30 +748,22 @@ class Optimization(object):
                     # Only works for one MM subsystem, and only need once.
                     self.gsystem_mm.update_density(core_density, isub = i, core = True)
                     # Only works for one MM subsystem, and use gaussian_density to save the O-site density
+                    #self.gsystem_mm.update_density(density, isub = i, wall = True) #update dipole density
 
                     # Converged, Just calculate the energy
                     if(self.converged ):
-                        #self.gsystem_mm.update_density(density_charge_mo, isub = i, fake = True)
                         if (density_charge_mo is None): #jezs
                            self.gsystem_mm.update_density(density_charge_mo, isub = i, fake = True)
                         else:
-                           #self.gsystem_mm.update_density(density_charge_mo, isub = i, fake = True)     
-                           self.gsystem_mm.update_density(density_charge_mo+density_charge_wall, isub = i, fake = True)   
-                        #if (density_charge_wall is None): #jezs
-                        #    self.gsystem_mm.update_density(density_charge_wall, isub = i, wall = True)
-                        #else:
-                        #    self.gsystem_mm.update_density(density_charge_wall, isub = i, wall = True)
+                           self.gsystem_mm.update_density(density_charge_mo+density_charge_wall, isub = i, fake = True)
+                           #self.gsystem_mm.update_density(density_charge_mo, isub = i, fake = True) 
                     # During the SCF
                     else:
                         if(density_charge_mo is None):
                             self.gsystem_mm.update_density(density_charge_mo, isub = i, fake = True)
                         else:
-                            self.gsystem_mm.update_density(density_charge_wall+density_charge_mo, isub = i, fake = True)
+                            self.gsystem_mm.update_density(density_charge_mo+density_charge_wall, isub = i, fake = True)
                             #self.gsystem_mm.update_density(density_charge_mo, isub = i, fake = True)
-                        #if (density_charge_wall is None): #jezs
-                        #    self.gsystem_mm.update_density(density_charge_wall, isub = i, wall = True)
-                        #else:
-                        #    self.gsystem_mm.update_density(density_charge_wall, isub = i, wall = True)
                     #-----------------------------------------------------------------------
             # Wall density #jezs                                                                    
             self.gsystem_qmmm.density_charge_wall[:] = self.gsystem_mm.density_charge_wall
