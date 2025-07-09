@@ -882,7 +882,7 @@ class DriverMM(DriverKS):
         #-----------------------------------------------------------------------
         self.qm_induced_dm = Field(grid = self.grid_sub, rank=self.nspin)
         #frag_den = Field(grid = self.grid_sub, rank=self.nspin)
-        #self.density_sub[:] = 0.0
+        self.density_sub[:] = 0.0
         self.qm_induced_dm[:] = 0.0
         #E_u = 0.0
         #E_ut = 0.0
