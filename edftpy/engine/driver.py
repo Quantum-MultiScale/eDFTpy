@@ -886,7 +886,7 @@ class DriverMM(DriverKS):
         self.qm_induced_dm[:] = 0.0
         #E_u = 0.0
         #E_ut = 0.0
-        k=0
+        #k=0
         for charge, d, d0, p in zip(charges, dipoles, self.MM_dp0, positions_d):
             if charge > 1 :
                 sigma = sigmaO  # 0.93
