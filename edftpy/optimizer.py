@@ -734,12 +734,10 @@ class Optimization(object):
                 core_density = None if not hasattr(driver, 'core_density') else driver.core_density
                 density_charge = None if not hasattr(driver, 'density_charge') else driver.density_charge
                 density_charge_mo = None if not hasattr(driver, 'density_charge_mo') else driver.density_charge_mo
-                density_charge_wall = None if not hasattr(driver, 'density_charge_wall') else driver.density_charge_wall
+                density_charge_wall = None if not hasattr(driver, 'density_charge_wall') else driver.density_charge_wall         
                 if density is not None :
                     if density_charge_mo is not None : density_charge_mo = density_charge_mo + density  #! update DD to NAD
-                    #if density_charge_mo is not None : density_charge_mo = density_charge_mo   #! Don't update DD to NAD
                     if density_charge is not None : density_charge = density_charge + density #update DD to Hartree
-                    #if density_charge is not None : density_charge = density_charge # do not updated  DD to Hartree
                 technique = self._get_driver_technique(driver)
                 sprint('technique: ',technique)
                 if technique in ['MM'] :
@@ -748,7 +746,6 @@ class Optimization(object):
                     # Only works for one MM subsystem, and only need once.
                     self.gsystem_mm.update_density(core_density, isub = i, core = True)
                     # Only works for one MM subsystem, and use gaussian_density to save the O-site density
-                    #self.gsystem_mm.update_density(density, isub = i, wall = True) #update dipole density
 
                     # Converged, Just calculate the energy
                     if(self.converged ):
@@ -756,14 +753,12 @@ class Optimization(object):
                            self.gsystem_mm.update_density(density_charge_mo, isub = i, fake = True)
                         else:
                            self.gsystem_mm.update_density(density_charge_mo+density_charge_wall, isub = i, fake = True)
-                           #self.gsystem_mm.update_density(density_charge_mo, isub = i, fake = True) 
                     # During the SCF
                     else:
                         if(density_charge_mo is None):
                             self.gsystem_mm.update_density(density_charge_mo, isub = i, fake = True)
                         else:
                             self.gsystem_mm.update_density(density_charge_mo+density_charge_wall, isub = i, fake = True)
-                            #self.gsystem_mm.update_density(density_charge_mo, isub = i, fake = True)
                     #-----------------------------------------------------------------------
             # Wall density #jezs                                                                    
             self.gsystem_qmmm.density_charge_wall[:] = self.gsystem_mm.density_charge_wall

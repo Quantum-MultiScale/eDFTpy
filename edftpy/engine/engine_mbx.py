@@ -6,6 +6,7 @@ from dftpy.constants import LEN_CONV
 from edftpy.engine.engine import Engine
 from edftpy.io import print2file
 from edftpy.mpi import sprint
+from os.path import exists
 
 try:
     __version__ = mbx.__version__
@@ -199,7 +200,6 @@ class EngineMBX(Engine):
 
     def set_extpot(self, nadfield=None, extpot = None, **kwargs):
         if self.comm.rank > 0 : return
-        from os.path import exists
         if exists('sigma.inp'):
            parain = open('sigma.inp','r').readlines()[0].split()
            sigma_grid  = float(parain[0])
@@ -258,8 +258,8 @@ class EngineMBX(Engine):
 
         #potfield = potfield*screen
         #print("Max ele:", np.max(potfield), np.min(potfield))
-        #mbx.set_potential_and_electric_field_on_sites(-pot, potfield+nadfield, units = 'au')
-        mbx.set_potential_and_electric_field_on_sites(-pot, potfield, units = 'au')
+        mbx.set_potential_and_electric_field_on_sites(-pot, potfield+nadfield, units = 'au')
+        #mbx.set_potential_and_electric_field_on_sites(-pot, potfield, units = 'au')
 
         dipoles = mbx.get_induced_dipoles(self.npoints, units = 'au') #A.U. already!
         #print("Dipoles au in engine: ", dipoles)
@@ -279,7 +279,6 @@ class EngineMBX(Engine):
 
     def set_extpot_NAD(self, extpot = None, MMden=None, **kwargs):
         if self.comm.rank > 0 : return
-        from os.path import exists
         if exists('sigma.inp'):
            parain = open('sigma.inp','r').readlines()[0].split()
            sigma_grid  = float(parain[0])
