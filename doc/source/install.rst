@@ -29,12 +29,12 @@ Optional:
 .. _pylibxc: https://tddft.org/programs/libxc/
 .. _pyFFTW: https://pyfftw.readthedocs.io/en/latest/
 .. _ASE: https://gitlab.com/ase/ase
-.. _DFTpy: https://gitlab.com/pavanello-research-group/dftpy
+.. _DFTpy: https://github.com/Quantum-MultiScale/DFTpy
 .. _mpi4py: https://bitbucket.org/mpi4py/mpi4py
 .. _mpi4py-fft: https://bitbucket.org/mpi4py/mpi4py-fft
 .. _xmltodict: https://github.com/martinblech/xmltodict
 .. _upf_to_json: https://github.com/simonpintarelli/upf_to_json
-.. _QEpy: https://gitlab.com/shaoxc/qepy
+.. _QEpy: https://github.com/Quantum-MultiScale/QEpy
 .. _f90wrap: https://github.com/jameskermode/f90wrap
 
 
@@ -46,12 +46,12 @@ Git:
 
     You can get the source from gitlab like this::
 
-        $ git clone https://gitlab.com/pavanello-research-group/edftpy.git
+        $ git clone https://github.com/Quantum-MultiScale/edftpy
         $ python -m pip install ./edftpy
 
     or simpler::
 
-        $ python -m pip install git+https://gitlab.com/pavanello-research-group/edftpy.git
+        $ python -m pip install git+https://github.com/Quantum-MultiScale/edftpy
 
 
 
