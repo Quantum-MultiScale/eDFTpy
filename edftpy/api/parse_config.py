@@ -337,9 +337,9 @@ def config2ions(config, ions = None, keysys = 'GSYSTEM', **kwargs):
             ions = io.ase_read(filename,
                     format=config[keysys]["cell"]["format"])
     else :
-        lattice = config[keysys]['cell']['lattice']
+        lattice = config[keysys]['cell']['lattice'] * LEN_CONV["Angstrom"]["Bohr"]
         symbols = config[keysys]['cell']['symbols']
-        positions = config[keysys]['cell']['positions']
+        positions = config[keysys]['cell']['positions'] * LEN_CONV["Angstrom"]["Bohr"]
         scaled_positions = config[keysys]['cell']['scaled_positions']
         numbers = config[keysys]['cell']['numbers']
         if len(lattice) == 9 :
@@ -349,7 +349,7 @@ def config2ions(config, ions = None, keysys = 'GSYSTEM', **kwargs):
         if scaled_positions is not None :
             scaled_positions = np.asarray(scaled_positions).reshape((-1, 3))
         ions = Ions(symbols = symbols, positions = positions, cell = lattice,
-                numbers = numbers, scaled_positions = scaled_positions, units = 'ase')
+                numbers = numbers, scaled_positions = scaled_positions)
     return ions
 
 def ions2config(config, ions, keysys = 'GSYSTEM', **kwargs):
