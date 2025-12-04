@@ -117,7 +117,7 @@ def get_atoms(args):
             config = read_conf(fname)
             config["GSYSTEM"]["cell"]["file"] = ''
             ions = config2ions(config)
-            struct = io.ions2ase(ions)
+            struct = ions.to_ase()
             if args.order == 'subsystem' :
                 struct = change_order_sub(args, config, struct)
         else :
@@ -126,7 +126,7 @@ def get_atoms(args):
             except Exception :
                 try:
                     struct = io.read(fname, format=format_in)
-                    struct = io.ions2ase(struct)
+                    struct = struct.to_ase()
                 except Exception as e:
                     raise e
 

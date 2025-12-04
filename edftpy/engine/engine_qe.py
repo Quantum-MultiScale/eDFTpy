@@ -8,7 +8,6 @@ import copy
 
 from dftpy.constants import LEN_CONV
 
-from edftpy.io import ions2ase
 from edftpy.engine.engine import Engine
 
 try:
@@ -226,7 +225,7 @@ class EngineQE(Engine):
         card_lines = []
 
         if ions is not None :
-            ase_atoms = ions2ase(ions)
+            ase_atoms = ions.to_ase()
         else :
             ase_atoms = None
 
