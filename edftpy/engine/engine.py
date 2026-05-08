@@ -250,6 +250,9 @@ class Engine(ABC):
     def tddft_initial(self, inputfile = None, comm = None, **kwargs):
         pass
 
+    def casida_initial(self, inputfile = None, comm = None, **kwargs):
+        pass
+
     def tddft_restart(self, **kwargs):
         pass
 

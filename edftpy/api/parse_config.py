@@ -11,7 +11,7 @@ from edftpy import io
 from edftpy.config import read_conf, write_conf
 from edftpy.functional import LocalPP, KEDF, Hartree, XC, Ewald
 from edftpy.optimizer import Optimization, MixOptimization
-from edftpy.tddft import TDDFT
+from edftpy.tddft import TDDFT, CasidaTDDFT
 from edftpy.evaluator import EmbedEvaluator, EvaluatorOF, TotalEvaluator
 from edftpy.density import file2density, DensityGenerator
 from edftpy.subsystem.subcell import SubCell, GlobalCell
@@ -22,7 +22,6 @@ from edftpy.subsystem.decompose import decompose_sub
 from edftpy.engine.driver import DriverKS, DriverEX, DriverMM, DriverOF
 from edftpy.utils.common import Grid, Ions
 from edftpy.utils import timer
-
 
 def import_drivers_conf(config):
     """
@@ -244,6 +243,9 @@ def config2optimizer(config, ions = None, optimizer = None, graphtopo = None, ps
             opt = optimizer
         else :
             opt = TDDFT(drivers = drivers, options = tddft_options, gsystem = gsystem, optimizer = opt)
+    elif task == 'Casida' :
+        sprint("Task", task)
+        opt = CasidaTDDFT(drivers = drivers, options = tddft_options, gsystem = gsystem, optimizer = opt)
 
     if optmix :
         opt = MixOptimization(optimizer = opt)
@@ -385,7 +387,6 @@ def config2total_embed(config, driver = None, optimizer = None, **kwargs):
                 if 'XC' in total_embed.funcdicts :
                     if driver.core_density is not None :
                         total_embed.funcdicts['XC'].core_density = driver.core_density
-#                total_embed = config2total_evaluator(config, ions, grid, pseudo = pseudo)
             else:
                 total_embed = config2total_evaluator(config, ions, grid, pseudo = pseudo)
                 # add core density to XC                                                             
@@ -718,6 +719,7 @@ def config2driver(config, keysys, ions, grid, pplist = None, total_evaluator = N
             driver = get_environ_driver(pplist, gsystem_ecut = gsystem_ecut, ecut = ecut, kpoints = kpoints, margs = margs)
         else :
             raise AttributeError(f"Not supported engine : {calculator}")
+
     driver.embed_evaluator = embed_evaluator
     return driver
 

@@ -76,12 +76,28 @@ class EngineQE(Engine):
 
     def get_rho(self, rho, **kwargs):
         return self.driver.get_density(out=rho)
-
+    
+    def get_eigenvalues(self, **kwargs):
+        return self.driver.get_eigenvalues(kpt=slice(None), **kwargs)
+    
+    def get_occupation_numbers(self, **kwargs):
+        return self.driver.get_occupation_numbers(**kwargs)
+    
+    def get_wave_function(self,number_of_states, **kwargs):
+        nbnd = min(number_of_states, self.driver.get_number_of_bands())
+        return self.driver.get_wave_function(band=np.arange(nbnd), **kwargs)
+    
+    def get_dftpy_ions(self, **kwargs):
+        return self.driver.get_dftpy_ions(**kwargs)
+    
     def get_rho_core(self, rho, **kwargs):
         return self.driver.get_core_density(out=rho)
 
     def get_ef(self, **kwargs):
         return self.driver.get_fermi_level()
+    
+    def data2field(self, grid, **kwargs):
+        return self.driver.data2field( grid=grid, **kwargs)
 
     def _initial_files(self, inputfile = None, comm = None, **kwargs):
         self.comm = comm or self.comm
@@ -101,6 +117,9 @@ class EngineQE(Engine):
                 embed = self.embed, iterative = self.embed.iterative, **kwargs)
 
     def tddft_initial(self, inputfile = None, comm = None, task = 'optical', **kwargs):
+        self.initial(inputfile=inputfile, comm=comm, task=task, **kwargs)
+
+    def casida_initial(self, inputfile = None, comm = None, task = 'casida', **kwargs):
         self.initial(inputfile=inputfile, comm=comm, task=task, **kwargs)
 
     def save(self, save = ['D'], **kwargs):
@@ -167,7 +186,11 @@ class EngineQE(Engine):
         inputfile = inputfile or self.inputfile
         self.driver = Driver(inputfile = inputfile, comm = self.comm, task = 'optical',
                 embed = self.embed, iterative = self.embed.iterative, progress = True, **kwargs)
-
+        
+    # def casida_after_scf(self, inputfile = None, **kwargs):
+    #     inputfile = inputfile or self.inputfile
+    #     self.driver = Driver(inputfile = inputfile, comm = self.comm, task = 'scf', **kwargs)
+    
     def tddft_restart(self, istep=None, **kwargs):
         self.driver.tddft_restart(istep=istep, **kwargs)
 

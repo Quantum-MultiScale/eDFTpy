@@ -6,11 +6,9 @@ from functools import reduce
 import itertools
 import hashlib
 from ase.symbols import Symbols, symbols2numbers
-
 from dftpy.utils import grid_map_index, grid_map_data
 
 from .common import Field, Grid
-
 
 def gaussian(x, sigma = 0.4, mu = 0.0, dim = 3, deriv = 0):
     if dim > 1 :

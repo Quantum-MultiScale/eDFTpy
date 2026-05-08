@@ -10,6 +10,8 @@ from edftpy.mpi import graphtopo, sprint
 
 import edftpy
 import dftpy
+from edftpy.utils.common import Field, Grid
+
 
 def import_drivers(calcs = {}):
     """

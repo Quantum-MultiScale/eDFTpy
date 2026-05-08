@@ -182,6 +182,16 @@
 			"comment": "Maximum execution time. Non-positive number means no time limit.",
 			"unit": "second",
 			"default": 0
+		},
+		"number_of_states": {
+			"type": "int",
+			"comment": "Number of excited states to calculate in Casida.",
+			"default": 10
+		},
+		"number_of_bands": {
+			"type": "int",
+			"comment": "Number of bands for wavefunction in Casida.",
+			"default": 10
 		}
 	},
 	"GSYSTEM": {

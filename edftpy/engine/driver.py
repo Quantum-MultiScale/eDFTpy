@@ -57,6 +57,8 @@ class DriverKS(Driver):
         kwargs["technique"] = kwargs.get("technique", 'KS')
         super().__init__(**kwargs)
         self.engine = engine
+        self.casida_results = None
+        self.number_of_states = None
 
         self._driver_initialise(**kwargs)
 
@@ -77,7 +79,7 @@ class DriverKS(Driver):
         self.update_workspace(first = True, restart = self.restart)
 
     @print2file()
-    def update_workspace(self, subcell = None, first = False, update = 0, restart = False, progress = False, **kwargs):
+    def update_workspace(self, subcell = None, first = False, update = 0, restart = False, progress = False, options = None, **kwargs):
         """
         Notes:
             clean workspace
@@ -93,6 +95,7 @@ class DriverKS(Driver):
         self.phi = None
         self.residual_norm = 1.0
         self.dp_norm = 1.0
+        
         if hasattr(self.mixer, 'restart') : self.mixer.restart()
         if subcell is not None : self.subcell = subcell
 
@@ -111,6 +114,40 @@ class DriverKS(Driver):
                     # get new density
                     self.engine.get_rho(self.charge)
                     self.density[:] = self._format_field_invert()
+
+        if self.task == 'casida' :
+            if first :
+                from casidapy.casida_engine import CasidaKS_MPI, run_casida_in_memory
+                from casidapy.casida_utils import normalize_wavefunctions
+                from casidapy.qepy_adapter import extract_casida_inputs_from_qepy_driver, slice_active_space
+                from casidapy.casida_api import CasidaOptions
+
+                # sprint("Am I dying DriverKS?", comm = self.comm)
+                self.number_of_states = options['number_of_states']
+                self.number_of_bands = options['number_of_bands']
+                
+                casida_inputs, casida_options = extract_casida_inputs_from_qepy_driver(self,
+                                                                                    self.subcell,
+                                                                                    self.subcell.grid,)
+                # sprint("casida_inputs, casida_options", casida_inputs, casida_options, comm = self.comm)
+                casida_options.n_states = self.number_of_states
+                
+                xc_func = self.evaluator.funcdicts.get('XC')
+                totalfunctional = xc_func
+
+                casida = CasidaKS_MPI(
+                    casida_inputs.rho_ks,
+                    totalfunctional,
+                    comm=self.subcell.comm)
+
+                results = run_casida_in_memory(casida_inputs, casida_options)
+
+                self.casida_results = {
+                    'omega': results.omega,
+                    'os_strength': results.f,
+                    'eigenvectors': results.Z,
+                    'dip_tran': results.mu_transition
+                }
 
         if self.grid_driver is not None :
             grid = self.grid_driver
@@ -168,10 +205,13 @@ class DriverKS(Driver):
     def _driver_initialise(self, **kwargs):
         if self.task == 'optical' :
             self.engine.tddft_initial(**kwargs)
+        elif self.task == 'casida' :
+            self.engine.casida_initial(**kwargs)
         else :
             self.engine.initial(**kwargs)
 
         self.grid_driver = self.get_grid_driver(self.grid)
+
         self.init_density(**kwargs)
 
     @print2file()
@@ -310,6 +350,7 @@ class DriverKS(Driver):
         self.prev_charge[:] = self.charge
 
         self.engine.set_extpot(extpot)
+        self.extpot_saved = extpot
 
     @print2file()
     def get_density(self, sdft = 'sdft', occupations = None, sum_band = False, **kwargs):
@@ -329,6 +370,9 @@ class DriverKS(Driver):
             sprint(fstr, comm = self.comm)
             sprint('occupations :\n', occupations, comm = self.comm, level = 1)
             sprint('band_energies :\n', self.band_energies, comm = self.comm, level = 1)
+#            from edftpy.io import write
+            # potential = self._format_field_invert(self.extpot_saved, self.grid_driver)
+            # potential.write(self.prefix+'_embed_potential.xsf', ions = self.subcell.ions)
             # from edftpy.io import write
             # write(self.prefix+'.xsf', self.density, ions = self.subcell.ions)
         return self.density
@@ -340,7 +384,33 @@ class DriverKS(Driver):
         self.band_energies = self.engine.get_band_energies(**kwargs).reshape((self.nspin, -1)) * self.engine.units['energy']
         self.band_weights = self.engine.get_band_weights(**kwargs).reshape((self.nspin, -1))
         return self.band_energies, self.band_weights
+    
+    def get_eigenvalues(self, **kwargs):
+        return self.engine.get_eigenvalues(**kwargs)
+    
+    def get_occupation_numbers(self, **kwargs):
+        return self.engine.get_occupation_numbers(**kwargs)
+    
+    def get_wave_function(self, **kwargs):
+        # sprint("Am I dying in get_wave_function driver? Number of Bands", self.number_of_bands, comm = self.comm)
+        return self.engine.get_wave_function(self.number_of_bands,**kwargs)
+    
+    def get_dftpy_grid(self, **kwargs):
+        return self.subcell.grid
+        return self.engine.get_dftpy_grid(**kwargs)
+    
+    def get_rho(self, **kwargs):
+        return self.engine.get_rho(**kwargs)
+    
+    def get_dftpy_ions(self, **kwargs):
+        return self.engine.get_dftpy_ions(**kwargs)
 
+    def get_dftpy_ions(self, **kwargs):
+        return self.engine.get_dftpy_ions(**kwargs)
+    
+    def data2field(self, grid, **kwargs):
+        return self.engine.data2field(grid=grid, **kwargs)
+    
     @print2file()
     def get_energy(self, olevel = 0, sdft = 'sdft', **kwargs):
         if olevel == 0 :
