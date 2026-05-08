@@ -95,6 +95,7 @@ class DriverKS(Driver):
         self.phi = None
         self.residual_norm = 1.0
         self.dp_norm = 1.0
+        self.casida_results = None
         
         if hasattr(self.mixer, 'restart') : self.mixer.restart()
         if subcell is not None : self.subcell = subcell
@@ -128,7 +129,8 @@ class DriverKS(Driver):
                 
                 casida_inputs, casida_options = extract_casida_inputs_from_qepy_driver(self,
                                                                                     self.subcell,
-                                                                                    self.subcell.grid,)
+                                                                                    self.subcell.grid,
+                                                                                    use_eDFTpy=True)
                 # sprint("casida_inputs, casida_options", casida_inputs, casida_options, comm = self.comm)
                 casida_options.n_states = self.number_of_states
                 
@@ -141,12 +143,13 @@ class DriverKS(Driver):
                     comm=self.subcell.comm)
 
                 results = run_casida_in_memory(casida_inputs, casida_options)
-
+                ## keep psi_list
                 self.casida_results = {
                     'omega': results.omega,
                     'os_strength': results.f,
                     'eigenvectors': results.Z,
-                    'dip_tran': results.mu_transition
+                    'dip_tran': results.mu_transition,
+                    'rho_transition': results.rho_transition,
                 }
 
         if self.grid_driver is not None :
