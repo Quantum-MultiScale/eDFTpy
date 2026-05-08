@@ -18,20 +18,21 @@ class CasidaTDDFT(Optimization):
             "olevel": 2,
             "sdft": 'sdft',
             "number_of_states": 10,
-            "number_of_bands": 10,
+            "number_of_bands": None,
         }
         self.options = default_options
         if isinstance(options, dict):
             self.options.update(options)
         self.optimizer = optimizer
+        # self.casida_results = {}
 
     def initialization(self):
         self.optimizer.optimize()
-        for driver in self.drivers:
+        for idx, driver in enumerate(self.drivers):
             if driver is not None :
                 driver.save(save = ['W', 'D'])
                 driver.task = 'casida'
-                sprint("Am I dying in update_workspace?")
+                # sprint("Am I dying in update_workspace?")
                 driver.update_workspace(first = True, options=self.options)
 
     def optimize(self, **kwargs):
@@ -47,10 +48,20 @@ class CasidaTDDFT(Optimization):
         #-----------------------------------------------------------------------
         self.time_begin = time.time()
         #-----------------------------------------------------------------------
-        self.casida_results = []
-        for driver in self.drivers:
-            if driver is not None and hasattr(driver, 'casida_results') and driver.casida_results is not None:
-                self.casida_results.append(driver.casida_results)
-            else:
-                self.casida_results.append(None)
-        yield self.casida_results
+        self.gsystem.casida_results = []
+        for idx, driver in enumerate(self.drivers):
+            if driver is not None :
+                driver.save(save = ['W', 'D'])
+                driver.task = 'casida'
+                if hasattr(driver, 'casida_results') and driver.casida_results is not None:
+                    self.gsystem.casida_results.append(driver.casida_results)
+                else:
+                    self.gsystem.casida_results.append(None)
+                
+                for key, value in driver.casida_results.items():
+                    if key == 'rho_transition':
+                        pass
+                    else:
+                        sprint(f"Subsystem {idx} Casida: {key}: \n", value, comm = driver.comm)
+
+        yield self.gsystem.casida_results
