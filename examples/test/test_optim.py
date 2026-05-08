@@ -13,8 +13,7 @@ from edftpy.density import DensityGenerator
 from edftpy.subsystem.subcell import GlobalCell
 
 data_path = os.environ.get('EDFTPY_DATA_PATH')
-if not data_path : data_path = 'DATA/'
-if not os.path.exists(data_path) : data_path = '../DATA/'
+if not data_path : data_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'DATA')
 pp_al = data_path + '/Al_OEPP_lda.recpot'
 ions = Ions.from_ase(bulk('Al', 'fcc', a=4.05, cubic=True))
 

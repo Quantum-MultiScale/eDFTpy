@@ -14,8 +14,7 @@ from edftpy.mixer import PulayMixer
 from edftpy.mpi import GraphTopo, MP
 
 data_path = os.environ.get('EDFTPY_DATA_PATH')
-if not data_path : data_path = 'DATA/'
-if not os.path.exists(data_path) : data_path = '../DATA/'
+if not data_path : data_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'DATA')
 pp_al = data_path + '/Al_OEPP_lda.recpot'
 #Build FCC Al, first atom shift 0.1 for force calculation
 atoms = bulk('Al', 'fcc', a=4.05, cubic=True)

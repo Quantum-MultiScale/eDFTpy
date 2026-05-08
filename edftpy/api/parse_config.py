@@ -369,15 +369,30 @@ def config2total_embed(config, driver = None, optimizer = None, **kwargs):
     else :
         if driver.technique != 'KS' :
             raise AttributeError("Sorry config2total_embed only support KS subsystem yet.")
+        # Check if has cell-cut
+        has_cell_cut = False
+        if "cell" in config[driver.key] and "split" in config[driver.key]["cell"]:
+            cellsplit = config[driver.key]["cell"]["split"]
+            if cellsplit is not None and any(x > 0 for x in cellsplit):
+                has_cell_cut = True
         if driver.comm.rank == 0 :
             grid = Grid(lattice=grid_global.lattice, nr=grid_global.nrR, full=grid_global.full, direct = True)
             pseudo = optimizer.gsystem.total_evaluator.funcdicts['PSEUDO'].restart(duplicate=True)
-            total_embed = config2total_evaluator(config, driver.subcell.ions, grid, pseudo = pseudo)
-            # add core density to XC
-            if 'XC' in total_embed.funcdicts :
-                if driver.core_density is not None :
-                    core_density = grid_map_data(driver.core_density, grid = grid)
-                    total_embed.funcdicts['XC'].core_density = core_density
+            ions = driver.subcell.ions
+            if has_cell_cut:
+                total_embed = driver.embed_evaluator
+                # add core density to XC
+                if 'XC' in total_embed.funcdicts :
+                    if driver.core_density is not None :
+                        total_embed.funcdicts['XC'].core_density = driver.core_density
+#                total_embed = config2total_evaluator(config, ions, grid, pseudo = pseudo)
+            else:
+                total_embed = config2total_evaluator(config, ions, grid, pseudo = pseudo)
+                # add core density to XC                                                             
+                if 'XC' in total_embed.funcdicts :
+                    if driver.core_density is not None :
+                        core_density = grid_map_data(driver.core_density, grid = grid)
+                        total_embed.funcdicts['XC'].core_density = core_density
             density = grid_map_data(driver.density, grid = grid)
             driver.density_global = density
         else :
@@ -703,6 +718,7 @@ def config2driver(config, keysys, ions, grid, pplist = None, total_evaluator = N
             driver = get_environ_driver(pplist, gsystem_ecut = gsystem_ecut, ecut = ecut, kpoints = kpoints, margs = margs)
         else :
             raise AttributeError(f"Not supported engine : {calculator}")
+    driver.embed_evaluator = embed_evaluator
     return driver
 
 def get_dftpy_driver(config, keysys, ions, grid, pplist = None, optimizer = None, cell_change = None, margs = {}):
