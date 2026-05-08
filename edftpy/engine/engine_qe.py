@@ -84,7 +84,10 @@ class EngineQE(Engine):
         return self.driver.get_occupation_numbers(**kwargs)
     
     def get_wave_function(self,number_of_states, **kwargs):
-        nbnd = min(number_of_states, self.driver.get_number_of_bands())
+        if number_of_states is None:
+            nbnd = self.driver.get_number_of_bands()
+        else:
+            nbnd = min(number_of_states, self.driver.get_number_of_bands())
         return self.driver.get_wave_function(band=np.arange(nbnd), **kwargs)
     
     def get_dftpy_ions(self, **kwargs):
