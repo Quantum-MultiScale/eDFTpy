@@ -119,21 +119,17 @@ class DriverKS(Driver):
         if self.task == 'casida' :
             if first :
                 from casidapy.casida_engine import CasidaKS_MPI, run_casida_in_memory
-                from casidapy.casida_utils import normalize_wavefunctions
-                from casidapy.qepy_adapter import extract_casida_inputs_from_qepy_driver, slice_active_space
-                from casidapy.casida_api import CasidaOptions
+                from casidapy.qepy_adapter import extract_casida_inputs_from_qepy_driver
 
-                # sprint("Am I dying DriverKS?", comm = self.comm)
                 self.number_of_states = options['number_of_states']
                 self.number_of_bands = options['number_of_bands']
-                
+
                 casida_inputs, casida_options = extract_casida_inputs_from_qepy_driver(self,
                                                                                     self.subcell,
                                                                                     self.subcell.grid,
                                                                                     use_eDFTpy=True)
-                # sprint("casida_inputs, casida_options", casida_inputs, casida_options, comm = self.comm)
                 casida_options.n_states = self.number_of_states
-                
+
                 xc_func = self.evaluator.funcdicts.get('XC')
                 totalfunctional = xc_func
 
