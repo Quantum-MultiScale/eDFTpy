@@ -1,0 +1,381 @@
+"""Disk handoff for per-fragment Casida results (MPI-safe, low peak memory on rank 0)."""
+from __future__ import annotations
+
+import os
+import shutil
+from typing import Any, Dict, List, Optional
+
+import numpy as np
+
+
+def fragment_casida_path(scratch_dir: str, frag_idx: int) -> str:
+    return os.path.join(scratch_dir, f"casida_frag_{frag_idx:04d}.npz")
+
+
+def _shared_scratch_root(base: Optional[str] = None) -> str:
+    """Filesystem visible to all MPI ranks (not node-local ``/tmp``)."""
+    if base:
+        return base
+    for key in ("EDFTPY_CASIDA_SCRATCH", "SLURM_SUBMIT_DIR"):
+        val = os.environ.get(key)
+        if val:
+            return val
+    return os.getcwd()
+
+
+def get_casida_scratch_dir(comm, is_mpi: bool, base: Optional[str] = None) -> str:
+    """Job-unique directory on a shared filesystem (all ranks use the same path)."""
+    root = _shared_scratch_root(base)
+    job = os.environ.get("SLURM_JOB_ID") or f"local_{os.getpid()}"
+    path = os.path.join(root, ".edftpy_casida_scratch", str(job))
+    if is_mpi:
+        if comm.rank == 0:
+            os.makedirs(path, exist_ok=True)
+        comm.Barrier()
+    else:
+        os.makedirs(path, exist_ok=True)
+    return path
+
+
+def _n_transition_densities(rho) -> int:
+    """Number of transitions whether ``rho`` is a list or stacked ndarray."""
+    if rho is None:
+        return 0
+    if isinstance(rho, np.ndarray):
+        if rho.size == 0:
+            return 0
+        if rho.ndim >= 4:
+            return int(rho.shape[0])
+        if rho.ndim == 3:
+            return 1
+        if rho.dtype == object:
+            return len(rho)
+    return len(rho)
+
+
+def _rho_transition_to_stack(rho) -> tuple[np.ndarray, int]:
+    """Normalize list or stacked-array ``rho_transition`` to ``(stack, n_trans)``."""
+    if rho is None:
+        return np.zeros((0,), dtype=float), 0
+    if isinstance(rho, np.ndarray):
+        if rho.size == 0:
+            return np.zeros((0,), dtype=float), 0
+        if rho.ndim >= 4:
+            stack = np.asarray(rho, dtype=float)
+            return stack, int(stack.shape[0])
+        if rho.ndim == 3:
+            stack = np.asarray(rho, dtype=float)[np.newaxis, ...]
+            return stack, 1
+        if rho.dtype == object:
+            rho = [rho[i] for i in range(len(rho))]
+        else:
+            raise ValueError(f"unsupported rho_transition ndarray shape {rho.shape}")
+    stack = np.stack([np.asarray(x) for x in rho], axis=0)
+    return stack, int(stack.shape[0])
+
+
+def casida_results_without_rho(results: Dict[str, Any]) -> Dict[str, Any]:
+    """Lightweight copy for MPI gather (no transition-density grids)."""
+    meta = {k: v for k, v in results.items() if k != "rho_transition"}
+    meta["n_trans"] = _n_transition_densities(results.get("rho_transition"))
+    return meta
+
+
+def write_fragment_casida(path: str, results: Dict[str, Any]) -> None:
+    """Write one fragment's Casida payload to a compressed ``.npz``."""
+    rho_stack, n_trans = _rho_transition_to_stack(results.get("rho_transition"))
+
+    payload = {
+        "omega": np.asarray(results["omega"]),
+        "Z": np.asarray(results.get("Z", results.get("eigenvectors"))),
+        "n_trans": np.array(n_trans, dtype=np.int64),
+        "rho_transition": rho_stack,
+    }
+    f = results.get("f", results.get("os_strength"))
+    if f is not None:
+        payload["f"] = np.asarray(f)
+    dip = results.get("dip_tran")
+    if dip is not None:
+        payload["dip_tran"] = np.asarray(dip)
+
+    tmp = path + ".tmp.npz"
+    np.savez_compressed(tmp, **payload)
+    os.replace(tmp, path)
+
+
+def load_fragment_casida_meta(path: str) -> Dict[str, Any]:
+    """Load energies, eigenvectors, dipoles — not ``rho_transition``."""
+    with np.load(path, allow_pickle=False) as z:
+        meta: Dict[str, Any] = {
+            "omega": np.asarray(z["omega"]),
+            "Z": np.asarray(z["Z"]),
+            "eigenvectors": np.asarray(z["Z"]),
+            "n_trans": int(np.asarray(z["n_trans"]).item()),
+        }
+        if "f" in z:
+            meta["f"] = np.asarray(z["f"])
+            meta["os_strength"] = meta["f"]
+        if "dip_tran" in z:
+            meta["dip_tran"] = np.asarray(z["dip_tran"])
+    return meta
+
+
+def load_fragment_rho_transition(path: str) -> List[np.ndarray]:
+    """Load transition densities for one fragment (list of 3D arrays)."""
+    with np.load(path, allow_pickle=False) as z:
+        stack = np.asarray(z["rho_transition"])
+    if stack.size == 0:
+        return []
+    return [stack[i] for i in range(stack.shape[0])]
+
+
+def write_local_fragment_files(
+    drivers,
+    scratch_dir: str,
+    comm,
+    is_mpi: bool,
+) -> List[Optional[str]]:
+    """Each rank writes its subsystem Casida results; returns per-index paths (rank 0 merged)."""
+    nsub = len(drivers)
+    local = []
+
+    for idx, driver in enumerate(drivers):
+        if driver is None:
+            continue
+        res = getattr(driver, "casida_results", None)
+        if res is None:
+            continue
+        path = fragment_casida_path(scratch_dir, idx)
+        write_fragment_casida(path, res)
+        driver.casida_results = casida_results_without_rho(res)
+        local.append((idx, path))
+
+    if not is_mpi:
+        paths = [None] * nsub
+        for idx, path in local:
+            paths[idx] = path
+        return paths
+
+    gathered = comm.gather(local, root=0)
+    if comm.rank != 0:
+        return None
+
+    paths = [None] * nsub
+    for contributions in gathered:
+        for idx, path in contributions:
+            paths[idx] = path
+    return paths
+
+
+def _cross_fragment_matched_state_indices(
+    fragment_results: List[Optional[Dict[str, Any]]],
+    energy_thresh: float,
+) -> List[Optional[List[int]]]:
+    """State indices per fragment within ``energy_thresh`` (Hartree) of some other fragment."""
+    n = len(fragment_results)
+    matched: List[set] = [set() for _ in range(n)]
+    for I in range(n):
+        res_i = fragment_results[I]
+        if res_i is None:
+            continue
+        omega_i = np.asarray(res_i["omega"], dtype=float)
+        for i in range(len(omega_i)):
+            for J in range(n):
+                if J == I:
+                    continue
+                res_j = fragment_results[J]
+                if res_j is None:
+                    continue
+                omega_j = np.asarray(res_j["omega"], dtype=float)
+                if np.any(np.abs(omega_i[i] - omega_j) < energy_thresh):
+                    matched[I].add(i)
+                    break
+    out: List[Optional[List[int]]] = []
+    for s in matched:
+        out.append(sorted(s) if s else None)
+    return out
+
+
+def reduce_one_fragment_casida(
+    results: Dict[str, Any],
+    state_indices: List[int],
+    z_row_eps: float = 0.0,
+    rho_path: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Subset states by energy matching; keep transition rows tied to kept states via ``Z``."""
+    state_ix = np.asarray(state_indices, dtype=int)
+    omega = np.asarray(results["omega"], dtype=float)
+    Z = np.asarray(results.get("Z", results.get("eigenvectors")), dtype=float)
+    n_states = len(omega)
+    n_trans = Z.shape[0]
+
+    omega_k = omega[state_ix]
+    Z_k = Z[:, state_ix]
+    if z_row_eps > 0:
+        row_mask = np.max(np.abs(Z_k), axis=1) > z_row_eps
+    else:
+        row_mask = np.max(np.abs(Z_k), axis=1) > 0.0
+    if not np.any(row_mask):
+        row_mask = np.zeros(n_trans, dtype=bool)
+        row_mask[int(np.argmax(np.max(np.abs(Z_k), axis=1)))] = True
+
+    Z_out = Z_k[row_mask]
+    reduced: Dict[str, Any] = {
+        "omega": omega_k,
+        "Z": Z_out,
+        "eigenvectors": Z_out,
+        "n_trans": int(Z_out.shape[0]),
+    }
+
+    f = results.get("f", results.get("os_strength"))
+    if f is not None:
+        f = np.asarray(f, dtype=float)
+        reduced["f"] = f[state_ix]
+        reduced["os_strength"] = reduced["f"]
+
+    dip = results.get("dip_tran")
+    if dip is not None:
+        dip = np.asarray(dip, dtype=float)
+        if dip.shape[0] == n_states:
+            reduced["dip_tran"] = dip[state_ix]
+        elif dip.shape[0] == n_trans:
+            reduced["dip_tran"] = dip[row_mask]
+
+    rho = results.get("rho_transition")
+    if rho_path:
+        rho = load_fragment_rho_transition(rho_path)
+    if rho is not None:
+        if isinstance(rho, np.ndarray) and rho.ndim >= 4:
+            reduced["rho_transition"] = np.asarray(rho)[row_mask]
+        else:
+            rho_list = (
+                rho
+                if not isinstance(rho, np.ndarray)
+                else [rho[i] for i in range(int(rho.shape[0]))]
+            )
+            reduced["rho_transition"] = [
+                rho_list[i] for i in np.nonzero(row_mask)[0]
+            ]
+
+    return reduced
+
+
+def reduce_active_space(
+    fragment_results: List[Optional[Dict[str, Any]]],
+    energy_thresh: float,
+    z_row_eps: float = 0.0,
+    stream_paths: Optional[List[Optional[str]]] = None,
+) -> List[Optional[Dict[str, Any]]]:
+    """Cross-fragment energy window on ``omega``; shrink ``Z`` and ``rho_transition`` accordingly."""
+    state_sets = _cross_fragment_matched_state_indices(
+        fragment_results, energy_thresh,
+    )
+    reduced: List[Optional[Dict[str, Any]]] = []
+    for idx, res in enumerate(fragment_results):
+        if res is None:
+            reduced.append(None)
+            continue
+        state_ix = state_sets[idx]
+        if not state_ix:
+            state_ix = list(range(len(np.asarray(res["omega"]))))
+        path = None
+        if stream_paths and idx < len(stream_paths):
+            path = stream_paths[idx]
+        reduced.append(
+            reduce_one_fragment_casida(
+                res, state_ix, z_row_eps=z_row_eps, rho_path=path,
+            ),
+        )
+    return reduced
+
+
+def uncoupled_excluded_states(
+    fragment_results: List[Optional[Dict[str, Any]]],
+    energy_thresh: float,
+) -> List[Optional[List[Dict[str, Any]]]]:
+    """Per-fragment local Casida data for states dropped by active-space reduction.
+
+    Uses the same cross-fragment ``|Δω|`` rule as :func:`reduce_active_space`.
+    When no state matches the threshold on a fragment, that fragment keeps all
+    states for coupling and returns an empty exclusion list.
+    """
+    state_sets = _cross_fragment_matched_state_indices(
+        fragment_results, energy_thresh,
+    )
+    excluded_by_frag: List[Optional[List[Dict[str, Any]]]] = []
+    for idx, res in enumerate(fragment_results):
+        if res is None:
+            excluded_by_frag.append(None)
+            continue
+        omega = np.asarray(res["omega"], dtype=float)
+        n_states = len(omega)
+        kept = state_sets[idx]
+        if not kept:
+            excluded_ix: List[int] = []
+        else:
+            kept_set = set(kept)
+            excluded_ix = [i for i in range(n_states) if i not in kept_set]
+        f = res.get("f", res.get("os_strength"))
+        entries: List[Dict[str, Any]] = []
+        for i in excluded_ix:
+            entry: Dict[str, Any] = {
+                "state_index": int(i),
+                "omega": float(omega[i]),
+            }
+            if f is not None:
+                entry["f"] = float(np.asarray(f, dtype=float)[i])
+            entries.append(entry)
+        excluded_by_frag.append(entries)
+    return excluded_by_frag
+
+
+def build_fragment_results_from_files(
+    paths: List[Optional[str]],
+) -> List[Optional[Dict[str, Any]]]:
+    """Build ``fragment_results`` metadata on rank 0 (no ``rho_transition`` in memory)."""
+    out: List[Optional[Dict[str, Any]]] = []
+    for path in paths:
+        if path is None or not os.path.isfile(path):
+            out.append(None)
+            continue
+        out.append(load_fragment_casida_meta(path))
+    return out
+
+
+def cleanup_fragment_files(
+    paths: List[Optional[str]],
+    scratch_dir: Optional[str] = None,
+    comm=None,
+    is_mpi: bool = False,
+    *,
+    root_rank_only: bool = True,
+) -> None:
+    """Remove per-fragment ``.npz`` files and optionally the scratch directory.
+
+    With MPI, only world rank 0 should delete (other ranks must not ``rmtree``
+    while rank 0 is still reading files during coupling).
+    """
+    if is_mpi and comm is not None:
+        comm.Barrier()
+
+    if root_rank_only and is_mpi and comm is not None and comm.rank != 0:
+        if is_mpi and comm is not None:
+            comm.Barrier()
+        return
+
+    if paths:
+        for path in paths:
+            if path and os.path.isfile(path):
+                try:
+                    os.remove(path)
+                except OSError:
+                    pass
+
+    if scratch_dir and os.path.isdir(scratch_dir):
+        try:
+            shutil.rmtree(scratch_dir, ignore_errors=True)
+        except OSError:
+            pass
+
+    if is_mpi and comm is not None:
+        comm.Barrier()

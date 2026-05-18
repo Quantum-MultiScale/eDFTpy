@@ -192,6 +192,16 @@
 			"type": "int",
 			"comment": "Number of bands for wavefunction in Casida.",
 			"default": 10
+		},
+		"coupling_energy_threshold": {
+			"type": "float",
+			"comment": "Hartree: before Pavanello coupling, keep fragment states whose omega is within this window of some state on another fragment. Non-positive disables reduction.",
+			"default": 0
+		},
+		"coupling_z_row_eps": {
+			"type": "float",
+			"comment": "After state selection, drop transition rows with max |Z[ia, kept states]| <= this (0 keeps any nonzero row).",
+			"default": 0
 		}
 	},
 	"GSYSTEM": {
