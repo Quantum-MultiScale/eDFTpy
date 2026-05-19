@@ -196,35 +196,46 @@ def _cross_fragment_matched_state_indices(
     return out
 
 
+def _collapse_transition_densities_to_state_basis(
+    Z_cols: np.ndarray,
+    rho_stack: np.ndarray,
+) -> tuple[List[np.ndarray], np.ndarray]:
+    """Build one transition density per kept excitation from its eigenvector column.
+
+    ``Z_cols`` is ``(n_trans, n_states)``; column ``k`` is eigenvector ``k`` in the
+    occ–unocc transition basis. Removed excitations drop their columns; each kept
+    column yields one grid for Pavanello coupling (length ``n_states``, not ``n_trans``).
+    """
+    n_trans, n_states = Z_cols.shape
+    phi_states: List[np.ndarray] = []
+    for k in range(n_states):
+        phi_k = np.zeros_like(rho_stack[0], dtype=float)
+        for ia in range(n_trans):
+            phi_k = phi_k + Z_cols[ia, k] * rho_stack[ia]
+        phi_states.append(phi_k)
+    return phi_states, np.eye(n_states, dtype=float)
+
+
 def reduce_one_fragment_casida(
     results: Dict[str, Any],
     state_indices: List[int],
     z_row_eps: float = 0.0,
     rho_path: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Subset states by energy matching; keep transition rows tied to kept states via ``Z``."""
+    """Subset excitations; drop their eigenvector columns and collapse ``rho`` to state basis."""
     state_ix = np.asarray(state_indices, dtype=int)
     omega = np.asarray(results["omega"], dtype=float)
     Z = np.asarray(results.get("Z", results.get("eigenvectors")), dtype=float)
-    n_states = len(omega)
+    n_states_full = len(omega)
     n_trans = Z.shape[0]
 
     omega_k = omega[state_ix]
-    Z_k = Z[:, state_ix]
-    if z_row_eps > 0:
-        row_mask = np.max(np.abs(Z_k), axis=1) > z_row_eps
-    else:
-        row_mask = np.max(np.abs(Z_k), axis=1) > 0.0
-    if not np.any(row_mask):
-        row_mask = np.zeros(n_trans, dtype=bool)
-        row_mask[int(np.argmax(np.max(np.abs(Z_k), axis=1)))] = True
+    Z_cols = Z[:, state_ix]
+    n_kept = len(state_ix)
 
-    Z_out = Z_k[row_mask]
     reduced: Dict[str, Any] = {
         "omega": omega_k,
-        "Z": Z_out,
-        "eigenvectors": Z_out,
-        "n_trans": int(Z_out.shape[0]),
+        "n_trans": n_kept,
     }
 
     f = results.get("f", results.get("os_strength"))
@@ -236,26 +247,25 @@ def reduce_one_fragment_casida(
     dip = results.get("dip_tran")
     if dip is not None:
         dip = np.asarray(dip, dtype=float)
-        if dip.shape[0] == n_states:
+        if dip.shape[0] == n_states_full:
             reduced["dip_tran"] = dip[state_ix]
         elif dip.shape[0] == n_trans:
-            reduced["dip_tran"] = dip[row_mask]
+            reduced["dip_tran"] = np.real(Z_cols.T @ dip)
 
     rho = results.get("rho_transition")
     if rho_path:
         rho = load_fragment_rho_transition(rho_path)
     if rho is not None:
-        if isinstance(rho, np.ndarray) and rho.ndim >= 4:
-            reduced["rho_transition"] = np.asarray(rho)[row_mask]
-        else:
-            rho_list = (
-                rho
-                if not isinstance(rho, np.ndarray)
-                else [rho[i] for i in range(int(rho.shape[0]))]
-            )
-            reduced["rho_transition"] = [
-                rho_list[i] for i in np.nonzero(row_mask)[0]
-            ]
+        rho_stack, _ = _rho_transition_to_stack(rho)
+        phi_states, Z_states = _collapse_transition_densities_to_state_basis(
+            np.real(Z_cols), rho_stack,
+        )
+        reduced["rho_transition"] = phi_states
+        reduced["Z"] = Z_states
+        reduced["eigenvectors"] = Z_states
+    else:
+        reduced["Z"] = Z_cols
+        reduced["eigenvectors"] = Z_cols
 
     return reduced
 
