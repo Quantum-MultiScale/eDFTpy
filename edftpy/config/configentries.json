@@ -202,6 +202,31 @@
 			"type": "float",
 			"comment": "After state selection, drop transition rows with max |Z[ia, kept states]| <= this (0 keeps any nonzero row).",
 			"default": 0
+		},
+		"casida_plot": {
+			"type": "bool",
+			"comment": "Write merged coupled+uncoupled spectrum PNG after subsystem Casida coupling.",
+			"default": true
+		},
+		"casida_plot_sigma": {
+			"type": "float",
+			"comment": "Gaussian broadening width (eV) for the Casida absorption plot.",
+			"default": 0.08
+		},
+		"casida_plot_out": {
+			"type": "str",
+			"comment": "Output PNG path for merged Casida spectrum (relative to SLURM_SUBMIT_DIR or cwd).",
+			"default": "casida_merged_spectrum.png"
+		},
+		"casida_plot_txt": {
+			"type": "str",
+			"comment": "Output text file listing state energy_eV and oscillator strength.",
+			"default": "casida_merged_spectrum.txt"
+		},
+		"casida_uncoupled_txt": {
+			"type": "str",
+			"comment": "Text file for uncoupled excluded fragment states (omega Ha/eV and f).",
+			"default": "casida_uncoupled_spectrum.txt"
 		}
 	},
 	"GSYSTEM": {

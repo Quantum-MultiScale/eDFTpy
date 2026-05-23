@@ -302,6 +302,8 @@ def reduce_active_space(
 def uncoupled_excluded_states(
     fragment_results: List[Optional[Dict[str, Any]]],
     energy_thresh: float,
+    *,
+    recompute_f: bool = True,
 ) -> List[Optional[List[Dict[str, Any]]]]:
     """Per-fragment local Casida data for states dropped by active-space reduction.
 
@@ -332,11 +334,180 @@ def uncoupled_excluded_states(
                 "state_index": int(i),
                 "omega": float(omega[i]),
             }
-            if f is not None:
+            if recompute_f:
+                entry["f"] = recompute_fragment_oscillator_strength(res, i)
+            elif f is not None:
                 entry["f"] = float(np.asarray(f, dtype=float)[i])
             entries.append(entry)
         excluded_by_frag.append(entries)
     return excluded_by_frag
+
+
+_HARTREE_TO_EV = 27.211386246
+
+
+def recompute_fragment_oscillator_strength(
+    fragment_res: Dict[str, Any],
+    state_index: int,
+) -> float:
+    """``f_n = (2/3) omega_n |d_n|^2`` with fragment ``omega``, ``Z``, ``dip_tran``.
+
+    Returns the raw Casida oscillator strength (not sum-normalized). The merged
+    spectrum applies a single ``sum(f)=1`` scaling in
+    :func:`merge_coupled_and_uncoupled_spectrum`.
+    """
+    omega = np.asarray(fragment_res["omega"], dtype=float)
+    w = float(omega[state_index])
+    if w < 1e-30:
+        return 0.0
+    mu = fragment_res.get("dip_tran")
+    if mu is None:
+        f = fragment_res.get("f", fragment_res.get("os_strength"))
+        if f is not None:
+            return float(np.asarray(f, dtype=float)[state_index])
+        return float("nan")
+    mu = np.asarray(mu, dtype=float)
+    Z = np.asarray(fragment_res.get("Z", fragment_res.get("eigenvectors")), dtype=float)
+    n_states = len(omega)
+    if mu.shape[0] == n_states:
+        d = mu[state_index]
+    else:
+        d = np.real(mu.T @ Z[:, state_index])
+    return (2.0 / 3.0) * w * float(np.dot(d, d))
+
+
+def write_uncoupled_excluded_txt(
+    path: str,
+    excluded_by_frag: List[Optional[List[Dict[str, Any]]]],
+) -> str:
+    """Write uncoupled fragment-local ``omega`` (Ha, eV) and ``f`` to a text file."""
+    path = os.path.abspath(path)
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    n_total = 0
+    with open(path, "w") as f:
+        f.write(
+            "# subsystem  state_index  omega_Ha  omega_eV  oscillator_strength\n",
+        )
+        for frag_idx, entries in enumerate(excluded_by_frag):
+            if not entries:
+                continue
+            for entry in entries:
+                omega_ha = float(entry["omega"])
+                omega_ev = omega_ha * _HARTREE_TO_EV
+                fval = entry.get("f", float("nan"))
+                f.write(
+                    f"{frag_idx:5d}  {int(entry['state_index']):5d}  "
+                    f"{omega_ha:14.8f}  {omega_ev:14.8f}  {float(fval):14.8f}\n",
+                )
+                n_total += 1
+    if n_total == 0:
+        with open(path, "a") as f:
+            f.write("# (no uncoupled excluded states)\n")
+    return path
+
+
+def merge_coupled_and_uncoupled_spectrum(
+    coupled: Optional[Dict[str, Any]],
+    excluded_by_frag: Optional[List[Optional[List[Dict[str, Any]]]]] = None,
+    *,
+    fragment_results_full: Optional[List[Optional[Dict[str, Any]]]] = None,
+    sort_by_energy: bool = True,
+    normalize_fosc: bool = True,
+) -> Dict[str, Any]:
+    """Build the final excitation spectrum: coupled block + fragment-local excluded states.
+
+    Coupled states use ``coupled['omega']`` and ``coupled['f']`` (from
+    :func:`casidapy.subsystem_coupling.coupled_oscillator_strengths`). Uncoupled
+    states use fragment ``omega`` with ``f`` from ``recompute_fragment_oscillator_strength``
+    when ``fragment_results_full`` is passed (same ``(2/3) omega |d|^2`` as coupling,
+    without per-fragment normalization of stored Casida ``f``).
+
+    Returns keys ``omega_all``, ``f_all``, ``n_coupled``, ``n_uncoupled``, and
+    provenance arrays ``is_coupled``, ``fragment_index``, ``state_index``.
+
+    If ``normalize_fosc`` is true (default), ``f_all`` is scaled so
+    ``sum(f_all) == 1`` after coupled and uncoupled entries are merged.
+    """
+    omega_list: List[float] = []
+    f_list: List[float] = []
+    is_coupled: List[bool] = []
+    fragment_index: List[int] = []
+    state_index: List[int] = []
+
+    if coupled is not None:
+        om = coupled.get("omega")
+        if om is not None:
+            om = np.asarray(om, dtype=float).ravel()
+            ff = coupled.get("f")
+            if ff is not None:
+                ff = np.asarray(ff, dtype=float).ravel()
+                if len(ff) != len(om):
+                    raise ValueError(
+                        f"len(coupled f)={len(ff)} != len(coupled omega)={len(om)}",
+                    )
+            else:
+                ff = np.full(len(om), np.nan, dtype=float)
+            for w, fv in zip(om, ff):
+                omega_list.append(float(w))
+                f_list.append(float(fv))
+                is_coupled.append(True)
+                fragment_index.append(-1)
+                state_index.append(-1)
+
+    n_unc = 0
+    if excluded_by_frag:
+        for frag_idx, entries in enumerate(excluded_by_frag):
+            if not entries:
+                continue
+            for entry in entries:
+                i = int(entry["state_index"])
+                omega_list.append(float(entry["omega"]))
+                if fragment_results_full is not None and frag_idx < len(
+                    fragment_results_full,
+                ):
+                    res_full = fragment_results_full[frag_idx]
+                    if res_full is not None:
+                        fv = recompute_fragment_oscillator_strength(res_full, i)
+                    else:
+                        fv = float(entry.get("f", float("nan")))
+                else:
+                    fv = float(entry.get("f", float("nan")))
+                f_list.append(fv)
+                is_coupled.append(False)
+                fragment_index.append(int(frag_idx))
+                state_index.append(int(entry.get("state_index", -1)))
+                n_unc += 1
+
+    n_cpl = int(sum(is_coupled))
+    n_unc = len(is_coupled) - n_cpl
+    omega_all = np.asarray(omega_list, dtype=float)
+    f_all = np.asarray(f_list, dtype=float)
+    is_coupled_arr = np.asarray(is_coupled, dtype=bool)
+    frag_ix = np.asarray(fragment_index, dtype=np.int32)
+    state_ix = np.asarray(state_index, dtype=np.int32)
+
+    if sort_by_energy and omega_all.size:
+        order = np.argsort(omega_all)
+        omega_all = omega_all[order]
+        f_all = f_all[order]
+        is_coupled_arr = is_coupled_arr[order]
+        frag_ix = frag_ix[order]
+        state_ix = state_ix[order]
+
+    if normalize_fosc and f_all.size:
+        f_sum = float(np.nansum(f_all))
+        if f_sum > 0.0 and np.isfinite(f_sum):
+            f_all = f_all / f_sum
+
+    return {
+        "omega_all": omega_all,
+        "f_all": f_all,
+        "n_coupled": n_cpl,
+        "n_uncoupled": n_unc,
+        "is_coupled": is_coupled_arr,
+        "fragment_index": frag_ix,
+        "state_index": state_ix,
+    }
 
 
 def build_fragment_results_from_files(
