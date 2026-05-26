@@ -229,8 +229,11 @@ def reduce_one_fragment_casida(
     n_states_full = len(omega)
     n_trans = Z.shape[0]
 
+    xpy = np.asarray(results.get("xpy", Z), dtype=float)
+
     omega_k = omega[state_ix]
     Z_cols = Z[:, state_ix]
+    xpy_cols = xpy[:, state_ix]
     n_kept = len(state_ix)
 
     reduced: Dict[str, Any] = {
@@ -250,7 +253,7 @@ def reduce_one_fragment_casida(
         if dip.shape[0] == n_states_full:
             reduced["dip_tran"] = dip[state_ix]
         elif dip.shape[0] == n_trans:
-            reduced["dip_tran"] = np.real(Z_cols.T @ dip)
+            reduced["dip_tran"] = (Z_cols.conj().T @ dip).real
 
     rho = results.get("rho_transition")
     if rho_path:
@@ -258,7 +261,7 @@ def reduce_one_fragment_casida(
     if rho is not None:
         rho_stack, _ = _rho_transition_to_stack(rho)
         phi_states, Z_states = _collapse_transition_densities_to_state_basis(
-            np.real(Z_cols), rho_stack,
+            np.real(xpy_cols), rho_stack,
         )
         reduced["rho_transition"] = phi_states
         reduced["Z"] = Z_states
@@ -366,14 +369,14 @@ def recompute_fragment_oscillator_strength(
         if f is not None:
             return float(np.asarray(f, dtype=float)[state_index])
         return float("nan")
-    mu = np.asarray(mu, dtype=float)
-    Z = np.asarray(fragment_res.get("Z", fragment_res.get("eigenvectors")), dtype=float)
+    mu = np.asarray(mu)
+    Z = np.asarray(fragment_res.get("Z", fragment_res.get("eigenvectors")))
     n_states = len(omega)
     if mu.shape[0] == n_states:
         d = mu[state_index]
     else:
-        d = np.real(mu.T @ Z[:, state_index])
-    return (2.0 / 3.0) * w * float(np.dot(d, d))
+        d = mu.T @ Z[:, state_index].conj()
+    return (2.0 / 3.0) * w * float(np.real(np.dot(d.conj(), d)))
 
 
 def write_uncoupled_excluded_txt(
@@ -412,7 +415,8 @@ def merge_coupled_and_uncoupled_spectrum(
     *,
     fragment_results_full: Optional[List[Optional[Dict[str, Any]]]] = None,
     sort_by_energy: bool = True,
-    normalize_fosc: bool = True,
+    normalize_fosc: bool = False,
+    n_electrons: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Build the final excitation spectrum: coupled block + fragment-local excluded states.
 
@@ -425,8 +429,11 @@ def merge_coupled_and_uncoupled_spectrum(
     Returns keys ``omega_all``, ``f_all``, ``n_coupled``, ``n_uncoupled``, and
     provenance arrays ``is_coupled``, ``fragment_index``, ``state_index``.
 
-    If ``normalize_fosc`` is true (default), ``f_all`` is scaled so
-    ``sum(f_all) == 1`` after coupled and uncoupled entries are merged.
+    If ``normalize_fosc`` is True and ``n_electrons`` is provided, ``f_all`` is
+    scaled so ``sum(f_all) == n_electrons`` (Thomas-Reiche-Kuhn sum rule).
+    If ``normalize_fosc`` is True but ``n_electrons`` is None, ``f_all`` is
+    scaled to ``sum(f_all) == 1`` (relative intensities only, not physically
+    normalized). Default is ``normalize_fosc=False`` (raw Casida values).
     """
     omega_list: List[float] = []
     f_list: List[float] = []
@@ -497,7 +504,8 @@ def merge_coupled_and_uncoupled_spectrum(
     if normalize_fosc and f_all.size:
         f_sum = float(np.nansum(f_all))
         if f_sum > 0.0 and np.isfinite(f_sum):
-            f_all = f_all / f_sum
+            target = float(n_electrons) if n_electrons is not None else 1.0
+            f_all = f_all * (target / f_sum)
 
     return {
         "omega_all": omega_all,

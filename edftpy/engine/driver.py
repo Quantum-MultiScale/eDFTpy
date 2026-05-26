@@ -186,7 +186,8 @@ class DriverKS(Driver):
             "os_strength": results.f,
             "Z": results.Z,
             "eigenvectors": results.Z,
-            "dip_tran": results.mu_transition,
+            "dip_tran": results.d_mode.T if results.d_mode is not None else results.mu_transition,
+            "xpy": results.xpy,
             "rho_transition": results.rho_transition,
         }
 
