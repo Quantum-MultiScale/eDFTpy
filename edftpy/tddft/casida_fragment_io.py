@@ -73,22 +73,101 @@ def _rho_transition_to_stack(rho) -> tuple[np.ndarray, int]:
     stack = np.stack([np.asarray(x) for x in rho], axis=0)
     return stack, int(stack.shape[0])
 
+RHO_BASIS_AMPLITUDE_XPY = "amplitude_xpy"
+RHO_BASIS_PRIMITIVE = "primitive"
+
+
+def _is_rho_amplitude_basis(
+    rho_stack: np.ndarray,
+    n_states: int,
+    n_trans_primitive: int,
+    rho_basis: Optional[str] = None,
+) -> bool:
+    """True if ``rho_stack`` is one grid per Casida state (not per primitive ia)."""
+    if rho_basis == RHO_BASIS_AMPLITUDE_XPY:
+        return True
+    if rho_basis == RHO_BASIS_PRIMITIVE:
+        return False
+    n_rho = int(rho_stack.shape[0]) if rho_stack.size else 0
+    if n_rho == 0:
+        return False
+    if n_rho == n_states and n_rho != n_trans_primitive:
+        return True
+    if n_rho == n_trans_primitive:
+        return False
+    raise ValueError(
+        f"cannot infer rho basis: rho_stack has {n_rho} slices, "
+        f"n_states={n_states}, n_trans_primitive={n_trans_primitive}",
+    )
+
+
+def _xpy_from_results(results: Dict[str, Any]) -> np.ndarray:
+    Z = np.asarray(results.get("Z", results.get("eigenvectors")), dtype=float)
+    xpy = results.get("xpy")
+    if xpy is None:
+        return Z
+    return np.asarray(xpy, dtype=float)
+
+
+def collapse_rho_to_amplitude_basis(
+    results: Dict[str, Any],
+) -> tuple[np.ndarray, int]:
+    """ρ_k(r) = Σ_ia Re[xpy[ia,k]] φ_ia(r). Returns (stack, n_states)."""
+    rho = results.get("rho_transition")
+    if rho is None:
+        return np.zeros((0,), dtype=float), 0
+
+    rho_stack, n_rho = _rho_transition_to_stack(rho)
+    Z = np.asarray(results.get("Z", results.get("eigenvectors")), dtype=float)
+    xpy = _xpy_from_results(results)
+    n_states = len(np.asarray(results["omega"]))
+    n_trans_prim = Z.shape[0]
+
+    if n_rho == 0:
+        return np.zeros((0,), dtype=float), 0
+
+    if _is_rho_amplitude_basis(
+        rho_stack, n_states, n_trans_prim, results.get("rho_basis"),
+    ):
+        return rho_stack, n_rho
+
+    if xpy.shape != Z.shape:
+        raise ValueError(f"xpy shape {xpy.shape} != Z shape {Z.shape}")
+
+    phi_states, _ = _collapse_transition_densities_to_state_basis(
+        np.real(xpy), rho_stack,
+    )
+    return np.stack(phi_states, axis=0), len(phi_states)
 
 def casida_results_without_rho(results: Dict[str, Any]) -> Dict[str, Any]:
     """Lightweight copy for MPI gather (no transition-density grids)."""
     meta = {k: v for k, v in results.items() if k != "rho_transition"}
-    meta["n_trans"] = _n_transition_densities(results.get("rho_transition"))
+    Z = np.asarray(results.get("Z", results.get("eigenvectors")), dtype=float)
+    meta["n_trans_primitive"] = int(Z.shape[0]) if Z.size else 0
+    meta["n_states"] = len(np.asarray(results["omega"]))
+    meta["n_trans"] = meta["n_states"]  # active grids after amplitude storage
     return meta
 
 
 def write_fragment_casida(path: str, results: Dict[str, Any]) -> None:
-    """Write one fragment's Casida payload to a compressed ``.npz``."""
-    rho_stack, n_trans = _rho_transition_to_stack(results.get("rho_transition"))
+    """Write one fragment's Casida payload to a compressed ``.npz``.
+
+    ``rho_transition`` is stored in **xpy amplitude basis**: one 3D grid per
+    eigenstate, not per primitive (occ, unocc) transition.
+    """
+    Z = np.asarray(results.get("Z", results.get("eigenvectors")))
+    xpy = _xpy_from_results(results)
+    n_trans_primitive = int(Z.shape[0])
+
+    rho_stack, n_states = collapse_rho_to_amplitude_basis(results)
 
     payload = {
         "omega": np.asarray(results["omega"]),
-        "Z": np.asarray(results.get("Z", results.get("eigenvectors"))),
-        "n_trans": np.array(n_trans, dtype=np.int64),
+        "Z": Z,
+        "xpy": xpy,
+        "n_trans": np.array(n_trans_primitive, dtype=np.int64),
+        "n_states": np.array(n_states, dtype=np.int64),
+        "rho_basis": np.array(RHO_BASIS_AMPLITUDE_XPY),
         "rho_transition": rho_stack,
     }
     f = results.get("f", results.get("os_strength"))
@@ -104,21 +183,30 @@ def write_fragment_casida(path: str, results: Dict[str, Any]) -> None:
 
 
 def load_fragment_casida_meta(path: str) -> Dict[str, Any]:
-    """Load energies, eigenvectors, dipoles — not ``rho_transition``."""
+    """Load energies, eigenvectors, dipoles — not ``rho_transition`` grids."""
     with np.load(path, allow_pickle=False) as z:
+        Z = np.asarray(z["Z"])
         meta: Dict[str, Any] = {
             "omega": np.asarray(z["omega"]),
-            "Z": np.asarray(z["Z"]),
-            "eigenvectors": np.asarray(z["Z"]),
+            "Z": Z,
+            "eigenvectors": Z,
             "n_trans": int(np.asarray(z["n_trans"]).item()),
         }
+        if "n_states" in z:
+            meta["n_states"] = int(np.asarray(z["n_states"]).item())
+        else:
+            meta["n_states"] = len(meta["omega"])
+        meta["n_trans_primitive"] = int(meta["n_trans"])
+        if "xpy" in z:
+            meta["xpy"] = np.asarray(z["xpy"])
+        if "rho_basis" in z:
+            meta["rho_basis"] = str(np.asarray(z["rho_basis"]).item())
         if "f" in z:
             meta["f"] = np.asarray(z["f"])
             meta["os_strength"] = meta["f"]
         if "dip_tran" in z:
             meta["dip_tran"] = np.asarray(z["dip_tran"])
     return meta
-
 
 def load_fragment_rho_transition(path: str) -> List[np.ndarray]:
     """Load transition densities for one fragment (list of 3D arrays)."""
@@ -197,21 +285,21 @@ def _cross_fragment_matched_state_indices(
 
 
 def _collapse_transition_densities_to_state_basis(
-    Z_cols: np.ndarray,
+    amp_cols: np.ndarray,
     rho_stack: np.ndarray,
 ) -> tuple[List[np.ndarray], np.ndarray]:
     """Build one transition density per kept excitation from its eigenvector column.
 
-    ``Z_cols`` is ``(n_trans, n_states)``; column ``k`` is eigenvector ``k`` in the
+    ``amp_cols`` is ``(n_trans, n_states)``; column ``k`` is eigenvector ``k`` in the
     occ–unocc transition basis. Removed excitations drop their columns; each kept
     column yields one grid for Pavanello coupling (length ``n_states``, not ``n_trans``).
     """
-    n_trans, n_states = Z_cols.shape
+    n_trans, n_states = amp_cols.shape
     phi_states: List[np.ndarray] = []
     for k in range(n_states):
         phi_k = np.zeros_like(rho_stack[0], dtype=float)
         for ia in range(n_trans):
-            phi_k = phi_k + Z_cols[ia, k] * rho_stack[ia]
+            phi_k = phi_k + amp_cols[ia, k] * rho_stack[ia]
         phi_states.append(phi_k)
     return phi_states, np.eye(n_states, dtype=float)
 
@@ -222,14 +310,14 @@ def reduce_one_fragment_casida(
     z_row_eps: float = 0.0,
     rho_path: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Subset excitations; drop their eigenvector columns and collapse ``rho`` to state basis."""
+    """Subset excitations; drop excluded states from ω, f, xpy, Z, and ρ grids."""
     state_ix = np.asarray(state_indices, dtype=int)
     omega = np.asarray(results["omega"], dtype=float)
     Z = np.asarray(results.get("Z", results.get("eigenvectors")), dtype=float)
     n_states_full = len(omega)
-    n_trans = Z.shape[0]
+    n_trans_prim = Z.shape[0]
 
-    xpy = np.asarray(results.get("xpy", Z), dtype=float)
+    xpy = _xpy_from_results(results)
 
     omega_k = omega[state_ix]
     Z_cols = Z[:, state_ix]
@@ -238,7 +326,11 @@ def reduce_one_fragment_casida(
 
     reduced: Dict[str, Any] = {
         "omega": omega_k,
+        "xpy": xpy_cols,
         "n_trans": n_kept,
+        "n_states": n_kept,
+        "n_trans_primitive": n_trans_prim,
+        "rho_basis": RHO_BASIS_AMPLITUDE_XPY,
     }
 
     f = results.get("f", results.get("os_strength"))
@@ -252,20 +344,34 @@ def reduce_one_fragment_casida(
         dip = np.asarray(dip, dtype=float)
         if dip.shape[0] == n_states_full:
             reduced["dip_tran"] = dip[state_ix]
-        elif dip.shape[0] == n_trans:
-            reduced["dip_tran"] = (Z_cols.conj().T @ dip).real
+        elif dip.shape[0] == n_trans_prim:
+            reduced["dip_tran"] = (np.real(xpy_cols.conj().T @ dip))
 
     rho = results.get("rho_transition")
+    rho_basis = results.get("rho_basis")
     if rho_path:
-        rho = load_fragment_rho_transition(rho_path)
+        with np.load(rho_path, allow_pickle=False) as z:
+            rho = np.asarray(z["rho_transition"])
+            if "rho_basis" in z:
+                rho_basis = str(np.asarray(z["rho_basis"]).item())
+            if "xpy" in z and "xpy" not in results:
+                xpy_cols = np.asarray(z["xpy"])[:, state_ix]
+
     if rho is not None:
         rho_stack, _ = _rho_transition_to_stack(rho)
-        phi_states, Z_states = _collapse_transition_densities_to_state_basis(
-            np.real(xpy_cols), rho_stack,
-        )
-        reduced["rho_transition"] = phi_states
-        reduced["Z"] = Z_states
-        reduced["eigenvectors"] = Z_states
+        if _is_rho_amplitude_basis(
+            rho_stack, n_states_full, n_trans_prim, rho_basis,
+        ):
+            reduced["rho_transition"] = [
+                rho_stack[i] for i in state_ix
+            ]
+        else:
+            phi_states, Z_states = _collapse_transition_densities_to_state_basis(
+                np.real(xpy_cols), rho_stack,
+            )
+            reduced["rho_transition"] = phi_states
+        reduced["Z"] = np.eye(n_kept, dtype=float)
+        reduced["eigenvectors"] = reduced["Z"]
     else:
         reduced["Z"] = Z_cols
         reduced["eigenvectors"] = Z_cols
@@ -352,31 +458,36 @@ _HARTREE_TO_EV = 27.211386246
 def recompute_fragment_oscillator_strength(
     fragment_res: Dict[str, Any],
     state_index: int,
+    *,
+    tda: bool = False,
 ) -> float:
-    """``f_n = (2/3) omega_n |d_n|^2`` with fragment ``omega``, ``Z``, ``dip_tran``.
-
-    Returns the raw Casida oscillator strength (not sum-normalized). The merged
-    spectrum applies a single ``sum(f)=1`` scaling in
-    :func:`merge_coupled_and_uncoupled_spectrum`.
-    """
+    """Raw f_n = (2/3) omega_n |d_n|^2; matches fragment/coupling conventions."""
     omega = np.asarray(fragment_res["omega"], dtype=float)
     w = float(omega[state_index])
     if w < 1e-30:
         return 0.0
+
     mu = fragment_res.get("dip_tran")
     if mu is None:
         f = fragment_res.get("f", fragment_res.get("os_strength"))
         if f is not None:
             return float(np.asarray(f, dtype=float)[state_index])
         return float("nan")
-    mu = np.asarray(mu)
+
+    mu = np.asarray(mu, dtype=float)
     Z = np.asarray(fragment_res.get("Z", fragment_res.get("eigenvectors")))
+    xpy = fragment_res.get("xpy")
+    amp = np.asarray(xpy if xpy is not None else Z, dtype=float)
     n_states = len(omega)
+
     if mu.shape[0] == n_states:
         d = mu[state_index]
+    elif amp.shape[0] == mu.shape[0] and amp.shape[1] == n_states:
+        d = np.real(mu.T @ amp[:, state_index])
     else:
-        d = mu.T @ Z[:, state_index].conj()
-    return (2.0 / 3.0) * w * float(np.real(np.dot(d.conj(), d)))
+        d = np.real(mu.T @ Z[:, state_index].conj())
+
+    return (2.0 / 3.0) * w * float(np.dot(d, d))
 
 
 def write_uncoupled_excluded_txt(
@@ -415,7 +526,8 @@ def merge_coupled_and_uncoupled_spectrum(
     *,
     fragment_results_full: Optional[List[Optional[Dict[str, Any]]]] = None,
     sort_by_energy: bool = True,
-    normalize_fosc: bool = False,
+    normalize_fosc: bool = True,
+    tda: bool = False,
     n_electrons: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Build the final excitation spectrum: coupled block + fragment-local excluded states.
@@ -474,7 +586,7 @@ def merge_coupled_and_uncoupled_spectrum(
                 ):
                     res_full = fragment_results_full[frag_idx]
                     if res_full is not None:
-                        fv = recompute_fragment_oscillator_strength(res_full, i)
+                        fv = recompute_fragment_oscillator_strength(res_full, i, tda=tda)
                     else:
                         fv = float(entry.get("f", float("nan")))
                 else:

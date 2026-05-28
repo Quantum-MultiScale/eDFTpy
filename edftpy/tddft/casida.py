@@ -9,6 +9,7 @@ from dftpy.mpi import MP, SerialComm
 from edftpy.mpi import graphtopo, sprint
 from edftpy.optimizer import Optimization
 from edftpy.tddft.casida_fragment_io import (
+    _n_transition_densities,
     build_fragment_results_from_files,
     cleanup_fragment_files,
     get_casida_scratch_dir,
@@ -170,20 +171,19 @@ def _log_fragment_casida_results(fragment_results, olevel):
         if res is None:
             continue
         omega = res.get("omega")
-        n_states = len(omega) if omega is not None else 0
-        rho_tran = res.get("rho_transition")
-        n_trans = res.get("n_trans")
-        if n_trans is None:
-            n_trans = len(rho_tran) if rho_tran is not None else 0
-        sprint(
-            f"Subsystem {idx} Casida: {n_states} states, "
-            f"{n_trans} transition densities",
-        )
+        n_states = res.get("n_states", len(res.get("omega", [])))
+        n_prim = res.get("n_trans_primitive", res.get("n_trans"))
+        sprint(f"Subsystem {idx} Casida: {n_states} amplitude-basis rho grids "
+               f"({n_prim} primitive transitions).")
         if olevel < 2:
             continue
         for key, value in res.items():
             if key == "rho_transition":
-                sprint(f"Subsystem {idx} Casida: {key}: {n_trans} stored")
+                n_rho = _n_transition_densities(value)
+                sprint(
+                    f"Subsystem {idx} Casida: {key}: {n_rho} stored "
+                    f"(amplitude/xpy basis; {n_prim} primitive transitions)",
+                )
             else:
                 sprint(f"Subsystem {idx} Casida: {key}:\n", value)
 
@@ -559,6 +559,8 @@ class CasidaTDDFT(Optimization):
                         fragment_results_full=getattr(
                             self, "_fragment_results_full", None,
                         ),
+                        normalize_fosc=True,
+                        tda=self.options.get("tda", False),
                     ),
                 )
 
@@ -589,7 +591,16 @@ class CasidaTDDFT(Optimization):
                     f"Coupled excitation energies (eV):\n"
                     f"{coupled['omega'] * _HARTREE_TO_EV}",
                 )
-                sprint(f"Coupled oscillator strengths:\n{coupled['f']}")
+                f_cpl = np.asarray(coupled["f"], dtype=float)
+                f_sum = float(np.nansum(f_cpl))
+                sprint(
+                    f"Coupled oscillator strengths (raw, sum={f_sum:.6g}):\n{f_cpl}",
+                )
+                if f_sum > 0.0 and np.isfinite(f_sum):
+                    sprint(
+                        "Coupled oscillator strengths (relative, sum=1):\n"
+                        f"{f_cpl / f_sum}",
+                    )
             if excluded is not None:
                 _log_uncoupled_excluded_states(excluded)
                 unc_txt = self.options.get(
