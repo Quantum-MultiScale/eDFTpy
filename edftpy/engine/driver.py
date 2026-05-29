@@ -187,8 +187,11 @@ class DriverKS(Driver):
             "Z": results.Z,
             "eigenvectors": results.Z,
             "dip_tran": results.d_mode.T if results.d_mode is not None else results.mu_transition,
-            "xpy": results.xpy,                    # required for collapse
-            "rho_transition": results.rho_transition,  # primitive from CasidaPy
+            "xpy": results.xpy,
+            "rho_transition": results.rho_transition,
+            "rho_basis": results.metadata.get(
+                "rho_basis", "amplitude_xpy",
+            ),
         }
 
     @property

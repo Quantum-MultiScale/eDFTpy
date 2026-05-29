@@ -9,7 +9,6 @@ from dftpy.mpi import MP, SerialComm
 from edftpy.mpi import graphtopo, sprint
 from edftpy.optimizer import Optimization
 from edftpy.tddft.casida_fragment_io import (
-    _n_transition_densities,
     build_fragment_results_from_files,
     cleanup_fragment_files,
     get_casida_scratch_dir,
@@ -179,10 +178,10 @@ def _log_fragment_casida_results(fragment_results, olevel):
             continue
         for key, value in res.items():
             if key == "rho_transition":
-                n_rho = _n_transition_densities(value)
+                rho_basis = res.get("rho_basis", "amplitude_xpy")
                 sprint(
-                    f"Subsystem {idx} Casida: {key}: {n_rho} stored "
-                    f"(amplitude/xpy basis; {n_prim} primitive transitions)",
+                    f"Subsystem {idx} Casida: {key}: {n_states} stored "
+                    f"({rho_basis}; {n_prim} primitive transitions)",
                 )
             else:
                 sprint(f"Subsystem {idx} Casida: {key}:\n", value)

@@ -37,24 +37,8 @@ def get_casida_scratch_dir(comm, is_mpi: bool, base: Optional[str] = None) -> st
     return path
 
 
-def _n_transition_densities(rho) -> int:
-    """Number of transitions whether ``rho`` is a list or stacked ndarray."""
-    if rho is None:
-        return 0
-    if isinstance(rho, np.ndarray):
-        if rho.size == 0:
-            return 0
-        if rho.ndim >= 4:
-            return int(rho.shape[0])
-        if rho.ndim == 3:
-            return 1
-        if rho.dtype == object:
-            return len(rho)
-    return len(rho)
-
-
 def _rho_transition_to_stack(rho) -> tuple[np.ndarray, int]:
-    """Normalize list or stacked-array ``rho_transition`` to ``(stack, n_trans)``."""
+    """Normalize list or stacked ``rho_transition`` to ``(stack, n_slices)``."""
     if rho is None:
         return np.zeros((0,), dtype=float), 0
     if isinstance(rho, np.ndarray):
@@ -74,31 +58,6 @@ def _rho_transition_to_stack(rho) -> tuple[np.ndarray, int]:
     return stack, int(stack.shape[0])
 
 RHO_BASIS_AMPLITUDE_XPY = "amplitude_xpy"
-RHO_BASIS_PRIMITIVE = "primitive"
-
-
-def _is_rho_amplitude_basis(
-    rho_stack: np.ndarray,
-    n_states: int,
-    n_trans_primitive: int,
-    rho_basis: Optional[str] = None,
-) -> bool:
-    """True if ``rho_stack`` is one grid per Casida state (not per primitive ia)."""
-    if rho_basis == RHO_BASIS_AMPLITUDE_XPY:
-        return True
-    if rho_basis == RHO_BASIS_PRIMITIVE:
-        return False
-    n_rho = int(rho_stack.shape[0]) if rho_stack.size else 0
-    if n_rho == 0:
-        return False
-    if n_rho == n_states and n_rho != n_trans_primitive:
-        return True
-    if n_rho == n_trans_primitive:
-        return False
-    raise ValueError(
-        f"cannot infer rho basis: rho_stack has {n_rho} slices, "
-        f"n_states={n_states}, n_trans_primitive={n_trans_primitive}",
-    )
 
 
 def _xpy_from_results(results: Dict[str, Any]) -> np.ndarray:
@@ -109,36 +68,6 @@ def _xpy_from_results(results: Dict[str, Any]) -> np.ndarray:
     return np.asarray(xpy, dtype=float)
 
 
-def collapse_rho_to_amplitude_basis(
-    results: Dict[str, Any],
-) -> tuple[np.ndarray, int]:
-    """ρ_k(r) = Σ_ia Re[xpy[ia,k]] φ_ia(r). Returns (stack, n_states)."""
-    rho = results.get("rho_transition")
-    if rho is None:
-        return np.zeros((0,), dtype=float), 0
-
-    rho_stack, n_rho = _rho_transition_to_stack(rho)
-    Z = np.asarray(results.get("Z", results.get("eigenvectors")), dtype=float)
-    xpy = _xpy_from_results(results)
-    n_states = len(np.asarray(results["omega"]))
-    n_trans_prim = Z.shape[0]
-
-    if n_rho == 0:
-        return np.zeros((0,), dtype=float), 0
-
-    if _is_rho_amplitude_basis(
-        rho_stack, n_states, n_trans_prim, results.get("rho_basis"),
-    ):
-        return rho_stack, n_rho
-
-    if xpy.shape != Z.shape:
-        raise ValueError(f"xpy shape {xpy.shape} != Z shape {Z.shape}")
-
-    phi_states, _ = _collapse_transition_densities_to_state_basis(
-        np.real(xpy), rho_stack,
-    )
-    return np.stack(phi_states, axis=0), len(phi_states)
-
 def casida_results_without_rho(results: Dict[str, Any]) -> Dict[str, Any]:
     """Lightweight copy for MPI gather (no transition-density grids)."""
     meta = {k: v for k, v in results.items() if k != "rho_transition"}
@@ -146,6 +75,10 @@ def casida_results_without_rho(results: Dict[str, Any]) -> Dict[str, Any]:
     meta["n_trans_primitive"] = int(Z.shape[0]) if Z.size else 0
     meta["n_states"] = len(np.asarray(results["omega"]))
     meta["n_trans"] = meta["n_states"]  # active grids after amplitude storage
+    if "rho_basis" in results:
+        meta["rho_basis"] = results["rho_basis"]
+    else:
+        meta["rho_basis"] = RHO_BASIS_AMPLITUDE_XPY
     return meta
 
 
@@ -159,7 +92,13 @@ def write_fragment_casida(path: str, results: Dict[str, Any]) -> None:
     xpy = _xpy_from_results(results)
     n_trans_primitive = int(Z.shape[0])
 
-    rho_stack, n_states = collapse_rho_to_amplitude_basis(results)
+    rho = results.get("rho_transition")
+    rho_stack, n_rho = _rho_transition_to_stack(rho) if rho is not None else (np.zeros((0,)), 0)
+    n_states = len(np.asarray(results["omega"]))
+    if n_rho and n_rho != n_states:
+        raise ValueError(
+            f"rho_transition has {n_rho} grids but {n_states} states",
+        )
 
     payload = {
         "omega": np.asarray(results["omega"]),
@@ -208,14 +147,6 @@ def load_fragment_casida_meta(path: str) -> Dict[str, Any]:
             meta["dip_tran"] = np.asarray(z["dip_tran"])
     return meta
 
-def load_fragment_rho_transition(path: str) -> List[np.ndarray]:
-    """Load transition densities for one fragment (list of 3D arrays)."""
-    with np.load(path, allow_pickle=False) as z:
-        stack = np.asarray(z["rho_transition"])
-    if stack.size == 0:
-        return []
-    return [stack[i] for i in range(stack.shape[0])]
-
 
 def write_local_fragment_files(
     drivers,
@@ -262,7 +193,7 @@ def _cross_fragment_matched_state_indices(
     """State indices per fragment within ``energy_thresh`` (Hartree) of some other fragment."""
     n = len(fragment_results)
     matched: List[set] = [set() for _ in range(n)]
-    for I in range(n):
+    for I in range(n):#Loop structure can be improved and made more efficient
         res_i = fragment_results[I]
         if res_i is None:
             continue
@@ -284,30 +215,9 @@ def _cross_fragment_matched_state_indices(
     return out
 
 
-def _collapse_transition_densities_to_state_basis(
-    amp_cols: np.ndarray,
-    rho_stack: np.ndarray,
-) -> tuple[List[np.ndarray], np.ndarray]:
-    """Build one transition density per kept excitation from its eigenvector column.
-
-    ``amp_cols`` is ``(n_trans, n_states)``; column ``k`` is eigenvector ``k`` in the
-    occ–unocc transition basis. Removed excitations drop their columns; each kept
-    column yields one grid for Pavanello coupling (length ``n_states``, not ``n_trans``).
-    """
-    n_trans, n_states = amp_cols.shape
-    phi_states: List[np.ndarray] = []
-    for k in range(n_states):
-        phi_k = np.zeros_like(rho_stack[0], dtype=float)
-        for ia in range(n_trans):
-            phi_k = phi_k + amp_cols[ia, k] * rho_stack[ia]
-        phi_states.append(phi_k)
-    return phi_states, np.eye(n_states, dtype=float)
-
-
 def reduce_one_fragment_casida(
     results: Dict[str, Any],
     state_indices: List[int],
-    z_row_eps: float = 0.0,
     rho_path: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Subset excitations; drop excluded states from ω, f, xpy, Z, and ρ grids."""
@@ -348,28 +258,19 @@ def reduce_one_fragment_casida(
             reduced["dip_tran"] = (np.real(xpy_cols.conj().T @ dip))
 
     rho = results.get("rho_transition")
-    rho_basis = results.get("rho_basis")
     if rho_path:
         with np.load(rho_path, allow_pickle=False) as z:
             rho = np.asarray(z["rho_transition"])
-            if "rho_basis" in z:
-                rho_basis = str(np.asarray(z["rho_basis"]).item())
             if "xpy" in z and "xpy" not in results:
                 xpy_cols = np.asarray(z["xpy"])[:, state_ix]
 
     if rho is not None:
-        rho_stack, _ = _rho_transition_to_stack(rho)
-        if _is_rho_amplitude_basis(
-            rho_stack, n_states_full, n_trans_prim, rho_basis,
-        ):
-            reduced["rho_transition"] = [
-                rho_stack[i] for i in state_ix
-            ]
-        else:
-            phi_states, Z_states = _collapse_transition_densities_to_state_basis(
-                np.real(xpy_cols), rho_stack,
+        rho_stack, n_rho = _rho_transition_to_stack(rho)
+        if n_rho != n_states_full:
+            raise ValueError(
+                f"rho_transition has {n_rho} grids but {n_states_full} states",
             )
-            reduced["rho_transition"] = phi_states
+        reduced["rho_transition"] = [rho_stack[i] for i in state_ix]
         reduced["Z"] = np.eye(n_kept, dtype=float)
         reduced["eigenvectors"] = reduced["Z"]
     else:
@@ -401,9 +302,7 @@ def reduce_active_space(
         if stream_paths and idx < len(stream_paths):
             path = stream_paths[idx]
         reduced.append(
-            reduce_one_fragment_casida(
-                res, state_ix, z_row_eps=z_row_eps, rho_path=path,
-            ),
+            reduce_one_fragment_casida(res, state_ix, rho_path=path),
         )
     return reduced
 
@@ -581,16 +480,7 @@ def merge_coupled_and_uncoupled_spectrum(
             for entry in entries:
                 i = int(entry["state_index"])
                 omega_list.append(float(entry["omega"]))
-                if fragment_results_full is not None and frag_idx < len(
-                    fragment_results_full,
-                ):
-                    res_full = fragment_results_full[frag_idx]
-                    if res_full is not None:
-                        fv = recompute_fragment_oscillator_strength(res_full, i, tda=tda)
-                    else:
-                        fv = float(entry.get("f", float("nan")))
-                else:
-                    fv = float(entry.get("f", float("nan")))
+                fv = float(entry.get("f", float("nan")))
                 f_list.append(fv)
                 is_coupled.append(False)
                 fragment_index.append(int(frag_idx))
@@ -616,8 +506,8 @@ def merge_coupled_and_uncoupled_spectrum(
     if normalize_fosc and f_all.size:
         f_sum = float(np.nansum(f_all))
         if f_sum > 0.0 and np.isfinite(f_sum):
-            target = float(n_electrons) if n_electrons is not None else 1.0
-            f_all = f_all * (target / f_sum)
+            #target = float(n_electrons) if n_electrons is not None else 1.0
+            f_all = f_all/ f_sum
 
     return {
         "omega_all": omega_all,
