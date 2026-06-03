@@ -116,41 +116,9 @@ class DriverKS(Driver):
                     self.engine.get_rho(self.charge)
                     self.density[:] = self._format_field_invert()
 
-        if self.task == 'casida' :
-            if first :
-                from casidapy.casida_engine import CasidaKS_MPI, run_casida_in_memory
-                from casidapy.casida_utils import normalize_wavefunctions
-                from casidapy.qepy_adapter import extract_casida_inputs_from_qepy_driver, slice_active_space
-                from casidapy.casida_api import CasidaOptions
-
-                # sprint("Am I dying DriverKS?", comm = self.comm)
-                self.number_of_states = options['number_of_states']
-                self.number_of_bands = options['number_of_bands']
-                
-                casida_inputs, casida_options = extract_casida_inputs_from_qepy_driver(self,
-                                                                                    self.subcell,
-                                                                                    self.subcell.grid,
-                                                                                    use_eDFTpy=True)
-                # sprint("casida_inputs, casida_options", casida_inputs, casida_options, comm = self.comm)
-                casida_options.n_states = self.number_of_states
-                
-                xc_func = self.evaluator.funcdicts.get('XC')
-                totalfunctional = xc_func
-
-                casida = CasidaKS_MPI(
-                    casida_inputs.rho_ks,
-                    totalfunctional,
-                    comm=self.subcell.comm)
-
-                results = run_casida_in_memory(casida_inputs, casida_options)
-                ## keep psi_list
-                self.casida_results = {
-                    'omega': results.omega,
-                    'os_strength': results.f,
-                    'eigenvectors': results.Z,
-                    'dip_tran': results.mu_transition,
-                    'rho_transition': results.rho_transition,
-                }
+        # First workspace pass after embedded SCF: extract QE orbitals and solve Casida.
+        if self.task == 'casida' and first:
+            self._run_fragment_casida(options)
 
         if self.grid_driver is not None :
             grid = self.grid_driver
@@ -181,6 +149,50 @@ class DriverKS(Driver):
         self.density_sub = self.subcell.density
         self.gaussian_density_sub = self.subcell.gaussian_density
         return
+
+    def _run_fragment_casida(self, options):
+        """Run CasidaPy for this fragment on ``subcell.comm`` (all ranks in comm_sub).
+
+        Reads KS data from the QEpy engine, solves the Casida problem, and stores
+        excitation energies, oscillator strengths, eigenvectors, dipoles, and
+        transition densities in ``self.casida_results`` for later MPI gather/coupling.
+        """
+        from casidapy.casida_engine import run_casida_in_memory
+        from casidapy.qepy_adapter import extract_casida_inputs_from_qepy_driver
+
+        if options is None:
+            options = {}
+        self.number_of_states = options.get("number_of_states", 10)
+        self.number_of_bands = options.get("number_of_bands")
+
+        casida_inputs, casida_options = extract_casida_inputs_from_qepy_driver(
+            self,
+            self.subcell,
+            self.subcell.grid,
+            use_eDFTpy=True,
+        )
+        casida_options.n_states = self.number_of_states
+        casida_options.matrix_free = options.get("matrix_free", True)
+        casida_options.solver_method = options.get("solver_method", "eigsh")
+
+        results = run_casida_in_memory(
+            casida_inputs,
+            casida_options,
+            comm=self.subcell.comm,
+        )
+        self.casida_results = {
+            "omega": results.omega,
+            "f": results.f,
+            "os_strength": results.f,
+            "Z": results.Z,
+            "eigenvectors": results.Z,
+            "dip_tran": results.d_mode.T if results.d_mode is not None else results.mu_transition,
+            "xpy": results.xpy,
+            "rho_transition": results.rho_transition,
+            "rho_basis": results.metadata.get(
+                "rho_basis", "amplitude_xpy",
+            ),
+        }
 
     @property
     def grid(self):
