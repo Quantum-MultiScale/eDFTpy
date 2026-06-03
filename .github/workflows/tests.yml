@@ -1,0 +1,42 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    container:
+      image: registry.gitlab.com/shaoxc/qepy:qepy-7.2g-dev
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install eDFTpy
+        run: |
+          python -m pip install .
+
+      - name: Run unit tests
+        working-directory: examples
+        run: |
+          pytest --cov-report term-missing --cov=./ ./test/
+
+      - name: Run MPI tests
+        working-directory: examples
+        shell: bash
+        run: |
+          export MPIRUN="mpirun --allow-run-as-root --oversubscribe -n 4"
+
+          for d in $(find ./mpitest/ -maxdepth 1 -mindepth 1 -type d); do
+            echo "Running MPI test in $d"
+            cd "$d"
+            ./run.sh
+            cd ../..
+          done
