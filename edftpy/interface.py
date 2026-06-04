@@ -102,7 +102,7 @@ def optimize_density_conf(config, **kwargs):
     sprint('Final energy (eV/atom)', energy * ENERGY_CONV['Hartree']['eV']/opt.gsystem.ions.nat)
     return opt
 
-def optimize_embed(config, optimizer, lprint = False, **kwargs):
+def optimize_embed(config, optimizer, lprint = False, mt = False, **kwargs):
     if not lprint :
         subkeys = [key for key in config if key.startswith('SUB')]
         for keysys in subkeys:
@@ -124,6 +124,13 @@ def optimize_embed(config, optimizer, lprint = False, **kwargs):
                 if cellsplit is not None and any(x > 0 for x in cellsplit):
                     has_cell_cut = True
                     break
+        if not mt :
+            subkeys = [key for key in config if key.startswith('SUB')]
+            for keysys in subkeys:
+                if  config[keysys].get("mt", None):
+                    mt = True
+                    break
+        
         if has_cell_cut:
             global_embedding_potential = np.zeros(tuple(global_nr), dtype=float)
 #            print("Global embedding potential initial", np.shape(global_embedding_potential))
@@ -195,6 +202,12 @@ def optimize_embed(config, optimizer, lprint = False, **kwargs):
 
                         potential = global_embedding_potential - subsystem_potential
                         write(outfile, potential, optimizer.gsystem.ions, data_type = 'potential')
+                    elif mt:
+                        sprint('Using MT: ', mt)
+                        subsystem_potential = driver.total_embed(driver.density, calcType = ['V']).potential
+                        potential = driver.evaluator.global_potential - subsystem_potential[index]
+                        # potential = subsystem_potential[index]
+                        write(outfile, potential, driver.subcell.ions, data_type = 'potential')
                     else:
                         subsystem_potential = driver.total_embed(driver.density, calcType = ['V']).potential
                         potential = driver.evaluator.global_potential - subsystem_potential[index]
