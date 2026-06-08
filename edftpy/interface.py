@@ -202,12 +202,6 @@ def optimize_embed(config, optimizer, lprint = False, mt = False, **kwargs):
 
                         potential = global_embedding_potential - subsystem_potential
                         write(outfile, potential, optimizer.gsystem.ions, data_type = 'potential')
-                    elif mt:
-                        sprint('Using MT: ', mt)
-                        subsystem_potential = driver.total_embed(driver.density, calcType = ['V']).potential
-                        potential = driver.evaluator.global_potential - subsystem_potential[index]
-                        # potential = subsystem_potential[index]
-                        write(outfile, potential, driver.subcell.ions, data_type = 'potential')
                     else:
                         subsystem_potential = driver.total_embed(driver.density, calcType = ['V']).potential
                         potential = driver.evaluator.global_potential - subsystem_potential[index]
