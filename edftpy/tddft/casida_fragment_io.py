@@ -165,9 +165,16 @@ def write_local_fragment_files(
         if res is None:
             continue
         path = fragment_casida_path(scratch_dir, idx)
-        write_fragment_casida(path, res)
+        # All ranks in a fragment's sub-communicator hold identical (replicated)
+        # Casida results. Only the sub-root writes the file; otherwise every
+        # rank races on the same temp file and os.replace fails with
+        # FileNotFoundError when another rank has already moved it.
+        sub_comm = getattr(driver, "comm", None)
+        sub_rank = sub_comm.rank if (sub_comm is not None and hasattr(sub_comm, "rank")) else 0
+        if sub_rank == 0:
+            write_fragment_casida(path, res)
+            local.append((idx, path))
         driver.casida_results = casida_results_without_rho(res)
-        local.append((idx, path))
 
     if not is_mpi:
         paths = [None] * nsub
@@ -193,22 +200,22 @@ def _cross_fragment_matched_state_indices(
     """State indices per fragment within ``energy_thresh`` (Hartree) of some other fragment."""
     n = len(fragment_results)
     matched: List[set] = [set() for _ in range(n)]
-    for I in range(n):#Loop structure can be improved and made more efficient
-        res_i = fragment_results[I]
-        if res_i is None:
+    omega_cache = [
+        np.asarray(fragment_results[k]["omega"], dtype=float) if fragment_results[k] is not None else None
+        for k in range(n)
+    ]
+    for I in range(n):
+        omega_i = omega_cache[I]
+        if omega_i is None:
             continue
-        omega_i = np.asarray(res_i["omega"], dtype=float)
-        for i in range(len(omega_i)):
-            for J in range(n):
-                if J == I:
-                    continue
-                res_j = fragment_results[J]
-                if res_j is None:
-                    continue
-                omega_j = np.asarray(res_j["omega"], dtype=float)
-                if np.any(np.abs(omega_i[i] - omega_j) < energy_thresh):
-                    matched[I].add(i)
-                    break
+        for J in range(n):
+            if J == I:
+                continue
+            omega_j = omega_cache[J]
+            if omega_j is None:
+                continue
+            close = np.abs(omega_i[:, None] - omega_j[None, :]) <= energy_thresh
+            matched[I].update(np.where(close.any(axis=1))[0].tolist())
     out: List[Optional[List[int]]] = []
     for s in matched:
         out.append(sorted(s) if s else None)
@@ -249,6 +256,16 @@ def reduce_one_fragment_casida(
         reduced["f"] = f[state_ix]
         reduced["os_strength"] = reduced["f"]
 
+    # Load rho and (optionally) a fresher xpy from disk before the dipole
+    # projection below — xpy_cols must reflect the file's amplitudes when the
+    # file was written with a different xpy than the in-memory results dict.
+    rho = results.get("rho_transition")
+    if rho_path:
+        with np.load(rho_path, allow_pickle=False) as z:
+            rho = np.asarray(z["rho_transition"])
+            if "xpy" in z and "xpy" not in results:
+                xpy_cols = np.asarray(z["xpy"])[:, state_ix]
+
     dip = results.get("dip_tran")
     if dip is not None:
         dip = np.asarray(dip, dtype=float)
@@ -256,13 +273,6 @@ def reduce_one_fragment_casida(
             reduced["dip_tran"] = dip[state_ix]
         elif dip.shape[0] == n_trans_prim:
             reduced["dip_tran"] = (np.real(xpy_cols.conj().T @ dip))
-
-    rho = results.get("rho_transition")
-    if rho_path:
-        with np.load(rho_path, allow_pickle=False) as z:
-            rho = np.asarray(z["rho_transition"])
-            if "xpy" in z and "xpy" not in results:
-                xpy_cols = np.asarray(z["xpy"])[:, state_ix]
 
     if rho is not None:
         rho_stack, n_rho = _rho_transition_to_stack(rho)
@@ -297,7 +307,7 @@ def reduce_active_space(
             continue
         state_ix = state_sets[idx]
         if not state_ix:
-            state_ix = list(range(len(np.asarray(res["omega"]))))
+            state_ix = []
         path = None
         if stream_paths and idx < len(stream_paths):
             path = stream_paths[idx]
@@ -331,7 +341,7 @@ def uncoupled_excluded_states(
         n_states = len(omega)
         kept = state_sets[idx]
         if not kept:
-            excluded_ix: List[int] = []
+            excluded_ix = list(range(n_states)) # Keep all states
         else:
             kept_set = set(kept)
             excluded_ix = [i for i in range(n_states) if i not in kept_set]
@@ -423,9 +433,8 @@ def merge_coupled_and_uncoupled_spectrum(
     coupled: Optional[Dict[str, Any]],
     excluded_by_frag: Optional[List[Optional[List[Dict[str, Any]]]]] = None,
     *,
-    fragment_results_full: Optional[List[Optional[Dict[str, Any]]]] = None,
     sort_by_energy: bool = True,
-    normalize_fosc: bool = True,
+    normalize_fosc: bool = False,
     tda: bool = False,
     n_electrons: Optional[int] = None,
 ) -> Dict[str, Any]:
@@ -506,8 +515,8 @@ def merge_coupled_and_uncoupled_spectrum(
     if normalize_fosc and f_all.size:
         f_sum = float(np.nansum(f_all))
         if f_sum > 0.0 and np.isfinite(f_sum):
-            #target = float(n_electrons) if n_electrons is not None else 1.0
-            f_all = f_all/ f_sum
+            target = float(n_electrons) if n_electrons is not None else 1.0
+            f_all = f_all * target / f_sum
 
     return {
         "omega_all": omega_all,
@@ -547,26 +556,23 @@ def cleanup_fragment_files(
     while rank 0 is still reading files during coupling).
     """
     if is_mpi and comm is not None:
-        comm.Barrier()
+        comm.Barrier()  # sync: ensure coupling is done reading files before deletion
 
-    if root_rank_only and is_mpi and comm is not None and comm.rank != 0:
-        if is_mpi and comm is not None:
-            comm.Barrier()
-        return
+    # only rank 0 deletes (or all ranks when root_rank_only=False)
+    if not (root_rank_only and is_mpi and comm is not None and comm.rank != 0):
+        if paths:
+            for path in paths:
+                if path and os.path.isfile(path):
+                    try:
+                        os.remove(path)
+                    except OSError:
+                        pass
 
-    if paths:
-        for path in paths:
-            if path and os.path.isfile(path):
-                try:
-                    os.remove(path)
-                except OSError:
-                    pass
-
-    if scratch_dir and os.path.isdir(scratch_dir):
-        try:
-            shutil.rmtree(scratch_dir, ignore_errors=True)
-        except OSError:
-            pass
+        if scratch_dir and os.path.isdir(scratch_dir):
+            try:
+                shutil.rmtree(scratch_dir, ignore_errors=True)
+            except OSError:
+                pass
 
     if is_mpi and comm is not None:
-        comm.Barrier()
+        comm.Barrier()  # sync: all ranks wait for deletion to finish

@@ -19,7 +19,7 @@ from edftpy.tddft.casida_fragment_io import (
     write_uncoupled_excluded_txt,
 )
 
-_HARTREE_TO_EV = 27.211386
+_HARTREE_TO_EV = 27.211386246
 from edftpy.utils.common import Field, Grid
 
 
@@ -29,6 +29,31 @@ def _mpi_context(gsystem):
     comm = gt.comm if gt is not None else graphtopo.comm
     is_mpi = bool(gt.is_mpi) if gt is not None else False
     return gt, comm, is_mpi
+
+
+def _gather_payload_size(value) -> int:
+    """Heuristic size for choosing the richest MPI gather contribution."""
+    if value is None:
+        return 0
+    try:
+        return int(np.asarray(value).size)
+    except Exception:
+        if hasattr(value, "__len__"):
+            return len(value)
+        return 1
+
+
+def _driver_density_array(driver):
+    """Full subsystem density on the sub-communicator root; skip placeholders."""
+    sub_comm = getattr(driver, "comm", None)
+    if sub_comm is not None and hasattr(sub_comm, "rank") and sub_comm.rank != 0:
+        return None
+    rho = np.asarray(driver.density)
+    if rho.size <= 4:
+        return None
+    if rho.ndim == 4:
+        rho = np.sum(rho, axis=0)
+    return rho
 
 
 def _gather_subsystem_list(drivers, comm, is_mpi, nsub, getter):
@@ -42,6 +67,11 @@ def _gather_subsystem_list(drivers, comm, is_mpi, nsub, getter):
     local = []
     for idx, driver in enumerate(drivers):
         if driver is None:
+            continue
+        # Fragment data such as ``driver.density`` is assembled only on the
+        # subsystem sub-communicator root; other ranks hold tiny placeholders.
+        sub_comm = getattr(driver, "comm", None)
+        if sub_comm is not None and hasattr(sub_comm, "rank") and sub_comm.rank != 0:
             continue
         value = getter(driver)
         if value is not None:
@@ -62,7 +92,10 @@ def _gather_subsystem_list(drivers, comm, is_mpi, nsub, getter):
         if not contributions:
             continue
         for idx, value in contributions:
-            merged[idx] = value
+            if merged[idx] is None or _gather_payload_size(value) > _gather_payload_size(
+                merged[idx],
+            ):
+                merged[idx] = value
     return merged
 
 
@@ -169,7 +202,6 @@ def _log_fragment_casida_results(fragment_results, olevel):
     for idx, res in enumerate(fragment_results):
         if res is None:
             continue
-        omega = res.get("omega")
         n_states = res.get("n_states", len(res.get("omega", [])))
         n_prim = res.get("n_trans_primitive", res.get("n_trans"))
         sprint(f"Subsystem {idx} Casida: {n_states} amplitude-basis rho grids "
@@ -376,9 +408,10 @@ class CasidaTDDFT(Optimization):
 
     def run(self, **kwargs):
         """Consume :meth:`irun` and return the last yielded result."""
-        for item in self.irun(**kwargs):
+        result = None
+        for result in self.irun(**kwargs):
             pass
-        return item
+        return result
 
     def irun(self, restart=None, **kwargs):
         """Run fragment Casida, gather results, optional Pavanello coupling, yield spectrum."""
@@ -508,7 +541,7 @@ class CasidaTDDFT(Optimization):
             comm,
             is_mpi,
             nsub,
-            lambda d: np.asarray(d.density),
+            _driver_density_array,
         )
         serial_grid, serial_rho = _prepare_serial_coupling_fields(
             self.gsystem, comm, is_mpi,
@@ -555,10 +588,7 @@ class CasidaTDDFT(Optimization):
                     merge_coupled_and_uncoupled_spectrum(
                         coupled,
                         excluded,
-                        fragment_results_full=getattr(
-                            self, "_fragment_results_full", None,
-                        ),
-                        normalize_fosc=True,
+                        normalize_fosc=False,
                         tda=self.options.get("tda", False),
                     ),
                 )
