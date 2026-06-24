@@ -26,12 +26,8 @@ ions = Ions.from_ase(atoms)
 
 class Test(unittest.TestCase):
     def setUp(self):
-#        self.energy = {'tfvw' :-8.27532783058605,
-#                'vw' : -11.392500261918915}
-#        self.force  = {'vw':-0.00577952 ,
-#                        'tfvw': -0.0205018}   
-        self.energy = {'tfvw' :-7.128579637163415,
-                'vw' : -10.245752186804737}
+        self.energy = {'tfvw' :-8.27532783058605,
+                'vw' : -11.392500261918915}
         self.force  = {'vw':-0.00577952 ,
                         'tfvw': -0.0205018}   
         self.kwargs = {}
