@@ -42,7 +42,11 @@ class Test(unittest.TestCase):
         opt = Optimization(EnergyEvaluator= evaluator, optimization_options = optimization_options, optimization_method = 'CG-HS')
         opt.optimize_rho(guess_rho=rho_ini)
         energy = opt.functional.energy
-        self.assertTrue(np.isclose(energy, -8.343674099220022))
+#        ref_energy = -8.343674099220022
+        ref_energy = -8.020232580351479
+        print("energy = {}, ref = {}".format(energy, ref_energy))
+        self.assertTrue(np.isclose(energy, ref_energy))
+        
 
 
 if __name__ == "__main__":

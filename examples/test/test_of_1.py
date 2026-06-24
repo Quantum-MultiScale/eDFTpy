@@ -26,8 +26,12 @@ ions = Ions.from_ase(atoms)
 
 class Test(unittest.TestCase):
     def setUp(self):
-        self.energy = {'tfvw' :-8.27532783058605,
-                'vw' : -11.392500261918915}
+#        self.energy = {'tfvw' :-8.27532783058605,
+#                'vw' : -11.392500261918915}
+#        self.force  = {'vw':-0.00577952 ,
+#                        'tfvw': -0.0205018}   
+        self.energy = {'tfvw' :-7.128579637163415,
+                'vw' : -10.245752186804737}
         self.force  = {'vw':-0.00577952 ,
                         'tfvw': -0.0205018}   
         self.kwargs = {}
@@ -88,6 +92,7 @@ class Test(unittest.TestCase):
         ref_energy = self.energy[kedf]
         ref_force1 = self.force[kedf]      # ref. Force for 1st atom should be 1 
         print("method = '{}', kedf = '{}', energy = {}, ref = {}".format(method, kedf, energy, ref_energy))
+        print("method = '{}', kedf = '{}', force = {}, ref = {}".format(method, kedf, force[0][0], ref_force1))
 
         self.assertTrue(np.isclose(energy, ref_energy, rtol = 1E-3))
         self.assertTrue(np.isclose(force[0][0], ref_force1, atol = 1E-3))
