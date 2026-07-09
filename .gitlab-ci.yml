@@ -3,10 +3,10 @@ image: registry.gitlab.com/shaoxc/qepy:qepy-7.2g-dev
 Test:
   before_script:
     - home=$( pwd )
-    #- git clone -b mpi2 https://gitlab.com/pavanello-research-group/dftpy.git
-    #- cd dftpy
-    #- python setup.py install --user
-    #- cd ..
+    - git clone -b mpi2 https://github.com/Quantum-MultiScale/DFTpy.git
+    - cd DFTpy
+    - python -m pip install .
+    - cd ..
   script:
    - python -m pip install .
    - cd examples

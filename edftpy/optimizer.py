@@ -981,7 +981,17 @@ class Optimization(object):
                 # total_energy = total_func.energy.copy()
         else :
             edict = self.gsystem.total_evaluator(self.gsystem.density, calcType = ['E'], split = True, olevel = 0)
+            if self.gsystem.grid.mp.rank == 0:
+                edict['HARTREE'].energy = edict['HARTREE'].energy
+                edict['PSEUDO'].energy = edict['PSEUDO'].energy
+            else:
+                edict['HARTREE'].energy = 0.0
+                edict['PSEUDO'].energy = 0.0
+
             total_energy = edict.pop('TOTAL').energy
+            # print(self.gsystem.grid.mp.rank, "Energy dictionary:")
+            # for key, value in edict.items():
+            #     print(self.gsystem.grid.mp.rank, key, value.energy)
 
         others = []
         if self.sdft == 'qmmm' :
