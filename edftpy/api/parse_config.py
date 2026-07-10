@@ -359,7 +359,7 @@ def ions2config(config, ions, keysys = 'GSYSTEM', **kwargs):
     config[keysys]['cell']['positions'] = (ions.positions.ravel()*LEN_CONV["Bohr"]["Angstrom"]).tolist()
     return config
 
-def config2total_embed(config, driver = None, optimizer = None, **kwargs):
+def config2total_embed(config, driver = None, optimizer = None, mt = False, **kwargs):
     """
     Only support KS subsystems
     """
@@ -369,9 +369,94 @@ def config2total_embed(config, driver = None, optimizer = None, **kwargs):
     else :
         if driver.technique != 'KS' :
             raise AttributeError("Sorry config2total_embed only support KS subsystem yet.")
+        # Check if has cell-cut
+        has_cell_cut = False
+        if "cell" in config[driver.key] and "split" in config[driver.key]["cell"]:
+            cellsplit = config[driver.key]["cell"]["split"]
+            if cellsplit is not None and any(x > 0 for x in cellsplit):
+                has_cell_cut = True
+        if not mt :
+            subkeys = [key for key in config if key.startswith('SUB')]
+            for keysys in subkeys:
+                if  config[keysys].get("mt", None):
+                    mt = True
+                    break
         if driver.comm.rank == 0 :
             grid = Grid(lattice=grid_global.lattice, nr=grid_global.nrR, full=grid_global.full, direct = True)
             pseudo = optimizer.gsystem.total_evaluator.funcdicts['PSEUDO'].restart(duplicate=True)
+            ions = driver.subcell.ions
+            if has_cell_cut:
+                total_embed = driver.embed_evaluator
+                # add core density to XC
+                if 'XC' in total_embed.funcdicts :
+                    if driver.core_density is not None :
+                        total_embed.funcdicts['XC'].core_density = driver.core_density
+            elif mt and not has_cell_cut:
+                total_embed = config2total_evaluator(config, ions, grid, mt= mt)
+                # add core density to XC
+                if 'XC' in total_embed.funcdicts :
+                    if driver.core_density is not None :
+                        total_embed.funcdicts['XC'].core_density = driver.core_density
+            else:
+                total_embed = config2total_evaluator(config, ions, grid, pseudo = pseudo)
+                # add core density to XC                                                             
+                if 'XC' in total_embed.funcdicts :
+                    if driver.core_density is not None :
+                        core_density = grid_map_data(driver.core_density, grid = grid)
+                        total_embed.funcdicts['XC'].core_density = core_density
+            density = grid_map_data(driver.density, grid = grid)
+            driver.density_global = density
+        else :
+            total_embed = None
+        driver.total_embed = total_embed
+    return driver
+
+def config2total_embed(config, driver = None, optimizer = None, mt = False, **kwargs):
+    """
+    Only support KS subsystems
+    """
+    grid_global = optimizer.gsystem.grid
+    if driver is None :
+        pass
+    else :
+        if driver.technique != 'KS' :
+            raise AttributeError("Sorry config2total_embed only support KS subsystem yet.")
+        # Check if has cell-cut
+        has_cell_cut = False
+        if "cell" in config[driver.key] and "split" in config[driver.key]["cell"]:
+            cellsplit = config[driver.key]["cell"]["split"]
+            if cellsplit is not None and any(x > 0 for x in cellsplit):
+                has_cell_cut = True
+        if not mt :
+            subkeys = [key for key in config if key.startswith('SUB')]
+            for keysys in subkeys:
+                if  config[keysys].get("mt", None):
+                    mt = True
+                    break
+        if driver.comm.rank == 0 :
+            grid = Grid(lattice=grid_global.lattice, nr=grid_global.nrR, full=grid_global.full, direct = True)
+            pseudo = optimizer.gsystem.total_evaluator.funcdicts['PSEUDO'].restart(duplicate=True)
+            ions = driver.subcell.ions
+            
+            if has_cell_cut:
+                total_embed = driver.embed_evaluator
+                # add core density to XC
+                if 'XC' in total_embed.funcdicts :
+                    if driver.core_density is not None :
+                        total_embed.funcdicts['XC'].core_density = driver.core_density
+            elif mt and not has_cell_cut:
+                total_embed = config2total_evaluator(config, ions, grid, mt= mt)
+                # add core density to XC
+                if 'XC' in total_embed.funcdicts :
+                    if driver.core_density is not None :
+                        total_embed.funcdicts['XC'].core_density = driver.core_density
+            else:
+                total_embed = config2total_evaluator(config, ions, grid, pseudo = pseudo)
+                # add core density to XC                                                             
+                if 'XC' in total_embed.funcdicts :
+                    if driver.core_density is not None :
+                        core_density = grid_map_data(driver.core_density, grid = grid)
+                        total_embed.funcdicts['XC'].core_density = core_density
             total_embed = config2total_evaluator(config, driver.subcell.ions, grid, pseudo = pseudo)
             # add core density to XC
             if 'XC' in total_embed.funcdicts :
@@ -448,7 +533,7 @@ def config2graphtopo(config, graphtopo = None, scale = None):
     sprint('Number of processors for each subsystem : \n ', f_str, comm = graphtopo.comm)
     return graphtopo
 
-def config2total_evaluator(config, ions, grid, pplist = None, total_evaluator= None, cell_change = None, pseudo = None):
+def config2total_evaluator(config, ions, grid, pplist = None, total_evaluator= None, mt = False, cell_change = None, pseudo = None):
     keysys = "GSYSTEM"
     pme = config["MATH"]["linearie"]
     linearii = config["MATH"]["linearii"]
@@ -468,6 +553,70 @@ def config2total_evaluator(config, ions, grid, pplist = None, total_evaluator= N
         if pseudo is None :
             pseudo = LocalPP(grid = grid, ions=ions, PP_list=pplist, PME=pme)
         hartree = Hartree()
+        xc = XC(pseudo = pseudo, **xc_kwargs)
+        funcdicts = {'XC' :xc, 'HARTREE' :hartree, 'PSEUDO' :pseudo}
+        if ke_kwargs['kedf'] is None or ke_kwargs['kedf'].lower().startswith('no'):
+            pass
+        else :
+            ke = KEDF(**ke_kwargs)
+            funcdicts['KE'] = ke
+        total_evaluator = TotalEvaluator(**funcdicts)
+    # Only depend on atoms---------------------------------------------------
+    ewald = Ewald(ions=ions, grid = grid, PME=linearii)
+    total_evaluator.funcdicts['EWALD'] = ewald
+    if xc_kwargs.get('dftd4', None):
+        from edftpy.api.dftd4 import VDWDFTD4
+        vdw = VDWDFTD4(ions = ions, mp = grid.mp, **xc_kwargs)
+        total_evaluator.funcdicts['VDW'] = vdw
+    #-----------------------------------------------------------------------
+    if environ_kwargs.get('file', None):
+        from edftpy.functional import Environ
+        environ = Environ(grid=grid, ions=ions, **environ_kwargs)
+        total_evaluator.funcdicts['ENVIRON'] = environ
+    #-----------------------------------------------------------------------
+    return total_evaluator
+
+def config2total_evaluator(config, ions, grid, pplist = None, total_evaluator= None, mt = False, cell_change = None, pseudo = None):
+    keysys = "GSYSTEM"
+    pme = config["MATH"]["linearie"]
+    linearii = config["MATH"]["linearii"]
+    xc_kwargs = config[keysys]["exc"].copy()
+    ke_kwargs = config[keysys]["kedf"].copy()
+    environ_kwargs = config[keysys].get('environ', {})
+    if pplist is None:
+        labels = set(ions.symbols)
+        pplist = {}
+        for key in config["PP"]:
+            ele = key.capitalize()
+            if ele in labels :
+                pplist[ele] = config["PATH"]["pp"] +os.sep+ config["PP"][key]
+    #---------------------------Functional----------------------------------
+    if mt:
+        from dftpy.functional.martyna_tuckerman import MartynaTuckerman
+        Lb = float(grid.lattice[0][0]) #already in Bohr
+        M_T = MartynaTuckerman(grid, alpha=np.sqrt(7/Lb))
+
+    if pseudo is not None:
+        pseudo.restart(grid=grid, ions=ions, full=False)
+
+    if cell_change == 'position' and total_evaluator is not None:
+        if pseudo is None :
+            pseudo = total_evaluator.funcdicts['PSEUDO']
+            pseudo.restart(grid=grid, ions=ions, full=False)
+        total_evaluator.funcdicts['PSEUDO'] = pseudo
+    else :
+        if pseudo is None :
+            if mt:
+                sprint('Using MT parse_config Pseudo : ', mt)
+                pseudo = LocalPP(grid = grid, ions=ions, PP_list=pplist, PME=pme, mt = M_T)
+            else:
+                pseudo = LocalPP(grid = grid, ions=ions, PP_list=pplist, PME=pme)       
+        if mt:
+            sprint('Using MT parse_config Hartree: ', mt)
+            hartree = Hartree(mt = M_T)
+        else:
+            hartree = Hartree()
+
         xc = XC(pseudo = pseudo, **xc_kwargs)
         funcdicts = {'XC' :xc, 'HARTREE' :hartree, 'PSEUDO' :pseudo}
         if ke_kwargs['kedf'] is None or ke_kwargs['kedf'].lower().startswith('no'):
@@ -703,6 +852,8 @@ def config2driver(config, keysys, ions, grid, pplist = None, total_evaluator = N
             driver = get_environ_driver(pplist, gsystem_ecut = gsystem_ecut, ecut = ecut, kpoints = kpoints, margs = margs)
         else :
             raise AttributeError(f"Not supported engine : {calculator}")
+    
+    driver.embed_evaluator = embed_evaluator
     return driver
 
 def get_dftpy_driver(config, keysys, ions, grid, pplist = None, optimizer = None, cell_change = None, margs = {}):
