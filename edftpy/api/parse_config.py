@@ -481,49 +481,6 @@ def config2total_evaluator(config, ions, grid, pplist = None, total_evaluator= N
     xc_kwargs = config[keysys]["exc"].copy()
     ke_kwargs = config[keysys]["kedf"].copy()
     environ_kwargs = config[keysys].get('environ', {})
-    #---------------------------Functional----------------------------------
-    if pseudo is not None :
-        pseudo.restart(grid=grid, ions=ions, full=False)
-
-    if cell_change == 'position' and total_evaluator is not None:
-        if pseudo is None :
-            pseudo = total_evaluator.funcdicts['PSEUDO']
-            pseudo.restart(grid=grid, ions=ions, full=False)
-        total_evaluator.funcdicts['PSEUDO'] = pseudo
-    else :
-        if pseudo is None :
-            pseudo = LocalPP(grid = grid, ions=ions, PP_list=pplist, PME=pme)
-        hartree = Hartree()
-        xc = XC(pseudo = pseudo, **xc_kwargs)
-        funcdicts = {'XC' :xc, 'HARTREE' :hartree, 'PSEUDO' :pseudo}
-        if ke_kwargs['kedf'] is None or ke_kwargs['kedf'].lower().startswith('no'):
-            pass
-        else :
-            ke = KEDF(**ke_kwargs)
-            funcdicts['KE'] = ke
-        total_evaluator = TotalEvaluator(**funcdicts)
-    # Only depend on atoms---------------------------------------------------
-    ewald = Ewald(ions=ions, grid = grid, PME=linearii)
-    total_evaluator.funcdicts['EWALD'] = ewald
-    if xc_kwargs.get('dftd4', None):
-        from edftpy.api.dftd4 import VDWDFTD4
-        vdw = VDWDFTD4(ions = ions, mp = grid.mp, **xc_kwargs)
-        total_evaluator.funcdicts['VDW'] = vdw
-    #-----------------------------------------------------------------------
-    if environ_kwargs.get('file', None):
-        from edftpy.functional import Environ
-        environ = Environ(grid=grid, ions=ions, **environ_kwargs)
-        total_evaluator.funcdicts['ENVIRON'] = environ
-    #-----------------------------------------------------------------------
-    return total_evaluator
-
-def config2total_evaluator(config, ions, grid, pplist = None, total_evaluator= None, mt = False, cell_change = None, pseudo = None):
-    keysys = "GSYSTEM"
-    pme = config["MATH"]["linearie"]
-    linearii = config["MATH"]["linearii"]
-    xc_kwargs = config[keysys]["exc"].copy()
-    ke_kwargs = config[keysys]["kedf"].copy()
-    environ_kwargs = config[keysys].get('environ', {})
     if pplist is None:
         labels = set(ions.symbols)
         pplist = {}
