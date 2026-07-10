@@ -2,6 +2,7 @@ import numpy as np
 from scipy import signal
 from abc import ABC, abstractmethod
 from edftpy.mpi import sprint, SerialComm
+from ase.units import Bohr,Hartree,mol,kcal
 
 class Driver(ABC):
     def __init__(self, technique = 'OF', key = None,
@@ -181,6 +182,8 @@ class Engine(ABC):
                 'volume' : 1.0,
                 'energy' : 1.0,
                 'order' : 'F',
+                'kcal/mol' : Hartree * mol / kcal ,
+                'Bohr' : Bohr, 
                 }
         self.units.update(units)
         self.units['volume'] = 1.0 / self.units['length']**3

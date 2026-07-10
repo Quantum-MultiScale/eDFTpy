@@ -288,9 +288,9 @@ def config2optimizer(config, ions = None, optimizer = None, graphtopo = None, ps
         inds_o = opt.gsystem.graphtopo.comm.bcast(inds_o, root = rank_d)
         # print('rank', opt.gsystem.graphtopo.comm.rank, rank_d, inds_m, pos_m)
         if len(pos_m) > 0 :
-            ions_mm.pos[inds_o] = pos_m
+            ions_mm.positions[inds_o] = pos_m
             index_mm = opt.gsystem_mm.ions_index
-            ions_qmmm.pos[index_mm] = ions_mm.pos
+            ions_qmmm.positions[index_mm] = ions_mm.positions
 
         def update_evaluator_ions(evaluator, ions, grid = None, linearii = True):
             pseudo = evaluator.funcdicts['PSEUDO']
@@ -544,7 +544,9 @@ def config2embed_evaluator(config, keysys, ions, grid, pplist = None, cell_chang
     pme = config["MATH"]["linearie"]
 
     ke_kwargs = config[keysys]["kedf"].copy()
-    embed = config[keysys]["embed"]
+    #embed = config[keysys]["embed"].upper()
+    embed = [element.upper() for element in config[keysys]["embed"]]
+
     exttype = config[keysys]["exttype"]
 
     opt_options = config[keysys]["opt"].copy()
@@ -598,7 +600,8 @@ def config2evaluator_of(config, keysys, ions=None, grid=None, pplist = None, gsy
     xc_kwargs = config[keysys]["exc"].copy()
     pme = config["MATH"]["linearie"]
 
-    embed = config[keysys]["embed"]
+    #embed = config[keysys]["embed"]
+    embed = [element.upper() for element in config[keysys]["embed"]]
     exttype = config[keysys]["exttype"]
 
     opt_options = config[keysys]["opt"].copy()

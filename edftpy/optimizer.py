@@ -7,7 +7,7 @@ import os
 from dftpy.constants import ENERGY_CONV
 
 from edftpy.mpi import sprint
-from edftpy.properties import get_total_forces, get_total_stress, get_total_energies
+from edftpy.properties import get_total_forces, get_total_stress, get_total_energies, get_total_forces_qmmm
 from edftpy.functional import hartree_energy
 from edftpy.utils.common import Functional
 from edftpy.io import write
@@ -637,14 +637,23 @@ class Optimization(object):
         return
 
     def set_global_potential_qmmm(self, **kwargs):
-        # self.gsystem_qmmm.total_evaluator.get_embed_potential(self.gsystem_qmmm.density, gaussian_density = self.gsystem.gaussian_density, with_global = True, calcType = ('V'))
         #-----------------------------------------------------------------------
         embed_keys = ['XC', 'KE']
-        self.gsystem_qmmm.total_evaluator.get_embed_potential(self.gsystem_qmmm.gaussian_density, embed_keys = embed_keys,
-                gaussian_density = self.gsystem.gaussian_density, with_global = False, calcType = ('V'))
-        pot_qmmm = self.gsystem_qmmm.total_evaluator.get_total_functional(self.gsystem_qmmm.density, calcType = ('V'), embed_keys = embed_keys).potential
+        #1. XC,KE from [O+H sites + QM part]
+        self.gsystem_qmmm.total_evaluator.get_embed_potential(self.gsystem_qmmm.gaussian_density,
+                                                              embed_keys = embed_keys,
+                                                              with_global = False, calcType = ('V'),
+                                                              gaussian_density = self.gsystem.gaussian_density,
+                                                              )
+
+        #2. Hartree+Pseudo from [M+H sites + QM part]
+        pot_qmmm = self.gsystem_qmmm.total_evaluator.get_total_functional(self.gsystem_qmmm.density,
+                                                      calcType = ('V'), embed_keys = embed_keys).potential
+        #3. Total
         self.gsystem_qmmm.total_evaluator.embed_potential[:] += pot_qmmm
+
         #-----------------------------------------------------------------------
+        #4. Give potentials above to QM part.
         self.gsystem.total_evaluator.embed_potential = self.gsystem_qmmm.total_evaluator.embed_potential
         #-----------------------------------------------------------------------
         for isub in range(self.nsub):
@@ -656,61 +665,61 @@ class Optimization(object):
             else :
                 if driver.evaluator.global_potential is None :
                     driver.evaluator.global_potential = np.zeros_like(driver.density)
+                # What is global potential ? Feeled by 1 subsystem
                 global_potential = driver.evaluator.global_potential
-
+            # What is the sub_value again?  from                    V global                      V sub
             self.gsystem_qmmm.sub_value(self.gsystem_qmmm.total_evaluator.embed_potential, global_potential, isub = isub)
 
         embed_keys = ['XC', 'KE']
-        pot_qm  = self.gsystem.total_evaluator.get_total_functional(self.density, calcType = ('V'), embed_keys = embed_keys).potential
+        #5. What is the self.density,is it QM density? Calculate QM Hartree+Pseudo potential. 
+        pot_qm_ele = self.gsystem.total_evaluator.get_total_functional(self.gsystem.density, calcType = ('V'), embed_keys = embed_keys).potential
+         
+        # Xin Chen added #Initializing the embedding potential for total gsystem
+        self.gsystem.total_evaluator.get_embed_potential(self.gsystem.gaussian_density,
+                                     embed_keys = embed_keys, with_global = False, calcType = ('V'))
+
+        self.gsystem.total_evaluator.get_embed_potential(self.gsystem_qmmm.gaussian_density,
+                                     embed_keys = embed_keys, with_global = False, calcType = ('V'),
+                                     gaussian_density = self.gsystem.gaussian_density)
+
+        # Xin Chen add. Compute the NAD potential from QM to MM:  V_{tot}^{NAD} - V_{MM^{NAD}
+        self.gsystem_mm.total_evaluator.get_embed_potential(self.gsystem_mm.gaussian_density, 
+                       embed_keys = embed_keys, with_global = False, calcType = ('V'))
+
+        self.gsystem_qmmm.total_evaluator.get_embed_potential(self.gsystem_qmmm.gaussian_density,
+                       embed_keys = embed_keys, with_global = False, calcType = ('V'),
+                       gaussian_density = self.gsystem.gaussian_density)
+
+        NADpotMM     = self.gsystem_mm.total_evaluator.embed_potential 
+        NADpotTOT    = self.gsystem_qmmm.total_evaluator.embed_potential 
+        subPOT       = NADpotTOT - NADpotMM 
+        pot_qm = subPOT[:] 
 
         for isub in range(self.nsub):
             driver = self.drivers[isub]
             if driver is None :
                 global_potential = None
+                global_potential_ele = None
             else :
                 if driver.evaluator.global_potential is None :
                     driver.evaluator.global_potential = np.zeros_like(driver.density)
+
+                if driver.evaluator.global_potential_ele is None :
+                    driver.evaluator.global_potential_ele = np.zeros_like(driver.density)
+
                 global_potential = driver.evaluator.global_potential
+                global_potential_ele = driver.evaluator.global_potential_ele
 
             technique = self._get_driver_technique(driver)
 
             if technique == 'MM' :
-                self.gsystem.sub_value(pot_qm, global_potential, isub = isub)
-                # if driver is not None :
-                    # global_potential.write('0_mm_pot.xsf', ions = self.gsystem_qmmm.ions)
-                    # extfield = global_potential.gradient()
-                    # extfield.write('0_mm_field.xsf', ions = self.gsystem_qmmm.ions)
-        # self.gsystem_qmmm.density.write('0_qmmm.xsf', ions = self.gsystem_qmmm.ions)
-        # self.gsystem.density.write('0_qm.xsf', ions = self.gsystem.ions)
-        # self.gsystem_mm.density.write('0_mm.xsf', ions = self.gsystem_mm.ions)
-        # self.gsystem_qmmm.total_evaluator.embed_potential.write('0_pot.xsf', ions = self.gsystem_qmmm.ions)
-        # pot_qm.write('0_1_pot.xsf', ions = self.gsystem_qmmm.ions)
-        # exit()
+                #6. Give potential to QM ????
+                self.gsystem.sub_value(pot_qm, global_potential, isub = isub)     # potential for energy calc.
+                self.gsystem.sub_value(pot_qm_ele, global_potential_ele, isub = isub) # potential for induce MM dipole.
 
-        # if self.iter > 0 :
-            # self.gsystem_mm.density.write('0_mm.xsf', ions = self.gsystem_mm.ions)
-            # embed_keys = ['XC', 'KE']
-            # pot_mm  = self.gsystem_mm.total_evaluator.get_total_functional(self.density, calcType = ('V'), embed_keys = embed_keys).potential
-            # for isub in range(self.nsub):
-                # driver = self.drivers[isub]
-                # if driver is None :
-                    # global_potential = None
-                # else :
-                    # if driver.evaluator.global_potential is None :
-                        # driver.evaluator.global_potential = np.zeros_like(driver.density)
-                    # global_potential = driver.evaluator.global_potential
-
-                # technique = self._get_driver_technique(driver)
-
-                # if technique == 'MM' :
-                    # from edftpy.utils.math import grid_map_data
-                    # self.gsystem_mm.sub_value(pot_mm, global_potential, isub = isub)
-                    # if driver is not None :
-                        # tmp = grid_map_data(global_potential, grid = driver.grid_driver)
-                        # tmp.write('0_pseudo_pot.xsf', ions = self.gsystem_mm.ions)
-                        # pot = driver.engine.get_potential(grid = driver.grid_driver)
-                        # pot.write('0_mm_pot.xsf', ions = self.gsystem_mm.ions)
-            # exit()
+        self.gsystem.total_evaluator.get_embed_potential(self.gsystem.density, embed_keys = embed_keys,
+                                                         gaussian_density = self.gsystem.gaussian_density,
+                                                         with_global = False, calcType = ('V'))
 
         return
 
@@ -719,31 +728,46 @@ class Optimization(object):
             self.gsystem_mm.density[:] = 0.0
             self.gsystem_mm.core_density[:] = 0.0
             self.gsystem_mm.gaussian_density[:] = 0.0
+            self.gsystem_mm.density_charge_wall[:] = 0.0 #dipole density
             for i, driver in enumerate(self.drivers):
                 density = None if not hasattr(driver, 'density') else driver.density
                 core_density = None if not hasattr(driver, 'core_density') else driver.core_density
                 density_charge = None if not hasattr(driver, 'density_charge') else driver.density_charge
                 density_charge_mo = None if not hasattr(driver, 'density_charge_mo') else driver.density_charge_mo
+                density_charge_wall = None if not hasattr(driver, 'density_charge_wall') else driver.density_charge_wall         
                 if density is not None :
-                    if density_charge_mo is not None : density_charge_mo = density_charge_mo + density
-                    if density_charge is not None : density_charge = density_charge + density
+                    if density_charge_mo is not None : density_charge_mo = density_charge_mo + density  #! update DD to NAD
+                    if density_charge is not None : density_charge = density_charge + density #update DD to Hartree
                 technique = self._get_driver_technique(driver)
+                sprint('technique: ',technique)
                 if technique in ['MM'] :
                     self.gsystem_mm.update_density(density_charge, isub = i)
                     #-----------------------------------------------------------------------
                     # Only works for one MM subsystem, and only need once.
                     self.gsystem_mm.update_density(core_density, isub = i, core = True)
                     # Only works for one MM subsystem, and use gaussian_density to save the O-site density
-                    self.gsystem_mm.update_density(density_charge_mo, isub = i, fake = True)
+
+                    # Converged, Just calculate the energy
+                    if(self.converged ):
+                        if (density_charge_mo is None): #jezs
+                           self.gsystem_mm.update_density(density_charge_mo, isub = i, fake = True)
+                        else:
+                           self.gsystem_mm.update_density(density_charge_mo+density_charge_wall, isub = i, fake = True)
+                    # During the SCF
+                    else:
+                        if(density_charge_mo is None):
+                            self.gsystem_mm.update_density(density_charge_mo, isub = i, fake = True)
+                        else:
+                            self.gsystem_mm.update_density(density_charge_mo+density_charge_wall, isub = i, fake = True)
                     #-----------------------------------------------------------------------
-            #
-            self.gsystem_qmmm.density[:] = self.gsystem.density + self.gsystem_mm.density
-            # Only need once, but for simple
+            # Wall density #jezs                                                                    
+            self.gsystem_qmmm.density_charge_wall[:] = self.gsystem_mm.density_charge_wall
+            # Total density
+            self.gsystem_qmmm.density[:] = self.gsystem.density + self.gsystem_mm.density 
+            # Core density, only need once
             self.gsystem_qmmm.core_density[:] = self.gsystem.core_density + self.gsystem_mm.core_density
-            # For nonadditive terms
-            # self.gsystem_mm.gaussian_density[:] = self.gsystem_mm.density
-            self.gsystem_qmmm.gaussian_density[:] = self.gsystem.density + self.gsystem_mm.gaussian_density
-            # self.gsystem_qmmm.gaussian_density[:] = self.gsystem_qmmm.density
+            # For nonadditive terms, Gaussian density
+            self.gsystem_qmmm.gaussian_density[:] = self.gsystem.density + self.gsystem_mm.gaussian_density 
             #
             if 'XC' in self.gsystem_qmmm.total_evaluator.funcdicts :
                 self.gsystem_qmmm.total_evaluator.funcdicts['XC'].core_density = self.gsystem_qmmm.core_density
@@ -775,6 +799,7 @@ class Optimization(object):
             root = 0
             if driver is None :
                 global_potential = None
+                global_density = None
             else :
                 if driver.evaluator.global_potential is None :
                     driver.evaluator.global_potential = np.zeros_like(driver.density)
@@ -920,7 +945,25 @@ class Optimization(object):
 
     @timer()
     def get_forces(self, **kwargs):
-        forces = get_total_forces(drivers = self.drivers, gsystem = self.gsystem, **kwargs)
+        """
+        Sep. 12, 2023: Xin Chen Modification
+        Add the force of QM/MM to here. 
+
+        """
+
+
+
+        if(self.sdft == 'qmmm'):
+            # Xin Chen modified. Branch for QMMM force calculation
+        #   for isub in range(self.nsub):
+        #       driver = self.drivers[isub]
+        #       technique = self._get_driver_technique(driver)
+        #       if technique == 'MM' : sub_mm_i = isub
+            sub_mm_i = 1
+            gsystems = [self.gsystem_qmmm, self.gsystem, self.gsystem_mm]
+            forces = get_total_forces_qmmm(drivers = self.drivers, gsystems = gsystems, **kwargs)
+        else:    
+            forces = get_total_forces(drivers = self.drivers, gsystem = self.gsystem, **kwargs)
         return forces
 
     def get_forces_with_nad(self, **kwargs):
@@ -1038,6 +1081,8 @@ class Optimization(object):
         return ep_w
 
     def end_scf(self):
+        # Update density to get correct description of total energy
+        self.update_qmmm_density()
         for i, driver in enumerate(self.drivers):
             if driver is not None :
                 driver.end_scf()

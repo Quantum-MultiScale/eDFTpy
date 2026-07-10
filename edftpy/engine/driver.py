@@ -10,7 +10,8 @@ from edftpy.mpi import sprint, MP
 from edftpy.engine.engine import Driver
 from edftpy.io import print2file
 from edftpy.density import build_pseudo_density
-
+from ase import units as Units
+from os.path import exists
 
 class DriverConstraint(object):
     """
@@ -584,10 +585,12 @@ class DriverMM(DriverKS):
             clean workspace
         """
         self.fermi = None
-        self._iter = 0
         self.energy = 0.0
         self.residual_norm = 0.0
         self.dp_norm = 0.0
+        self._iter = 0
+        self.field_NAD     = None
+        self.qm_induced_dm = None
 
         if not first :
             self.engine.update_ions(self.subcell, update = update)
@@ -600,7 +603,19 @@ class DriverMM(DriverKS):
         self.init_density(**kwargs)
 
     @print2file()
-    def init_density(self, rho_ini = None, density_initial = None, sigma = 0.6, rcut = 10.0, **kwargs):
+    def init_density(self, rho_ini = None, density_initial = None, sigma = 0.6, rcut = 10, **kwargs):
+        if exists('para.inp'):
+           parain = open('para.inp','r').readlines()[0].split()
+           parain1 = float(parain[0])
+           parain2 = float(parain[1])
+           parain3 = float(parain[2])
+           parain4 = float(parain[3])
+        else:    #mb-pbe default
+           parain1 =  0.85
+           parain2 =  0.305
+           parain3 =  0.85
+           parain4 =  0.305
+
         if self.grid_driver is not None :
             grid = self.grid_driver
         else :
@@ -617,6 +632,7 @@ class DriverMM(DriverKS):
             self.QMMM_dp = None
             # MM pentalty energy.  sum of alpha*|DP1-DP2| 
             self.MMpenalty_energy = 0.0
+            #self.self_energy = 0.0
         else :
             self.density = self.atmp2
             self.prev_density = self.atmp2
@@ -633,19 +649,36 @@ class DriverMM(DriverKS):
             charges = self.comm.bcast(charges, root = 0)
             positions_c = self.comm.bcast(positions_c, root = 0)
         #-----------------------------------------------------------------------
+
         self.density_charge_sub[:] = 0.0
         for c, p in zip(charges, positions_c):
             if c > 1 :
-                #sigma2 = 1.4 *sigma
-                sigma2 = 0.84
+                sigma2 = parain1 
             else :
-                #sigma2 = sigma
-                sigma2 = 0.84
+                sigma2 = parain2
             self.density_charge_sub = build_pseudo_density(p, self.grid_sub, scale = c, sigma = sigma2, rcut = rcut,
                     density = self.density_charge_sub, add = True, deriv = 0)
         #Double density---------------------------------------------------------
         self.density_charge_mo_sub = Field(grid = self.grid_sub, rank=self.nspin)
         self.density_charge_mo_sub[:] = 0.0
+
+
+        #wall density for push the QM electron density out
+        
+        if exists('sigma.inp'):
+           parain = open('sigma.inp','r').readlines()[0].split()
+           sigma_neg  = float(parain[1])
+           sigma_pos  = float(parain[2])
+           scale_neg  = float(parain[3]) 
+           scale_pos  = float(parain[4])
+        else:
+           sigma_neg  = 0.7   #0.5  #1.0
+           sigma_pos  = 0.2   #0.2  #1.0
+           scale_neg  = 5.0   #2.5  #1.0
+           scale_pos  = 1.0   #0.5  #0.2 
+
+        self.density_charge_wall_sub = Field(grid = self.grid_sub, rank=self.nspin)
+        self.density_charge_wall_sub[:] = 0.0
         pos_m, inds_m, inds_o = self.engine.get_m_sites()
         if self.comm.size > 1 :
             pos_m = self.comm.bcast(pos_m, root = 0)
@@ -654,7 +687,7 @@ class DriverMM(DriverKS):
         if len(inds_m) > 0 :
             dipoles, positions_d = self.engine.get_dipoles()
             # Get original dipole length (inner MM zone)
-            self.MM_dp0 =dipoles
+            self.MM_dp0 = dipoles
             if self.comm.size > 1 :
                 positions_d = self.comm.bcast(positions_d, root = 0)
 
@@ -665,29 +698,38 @@ class DriverMM(DriverKS):
             #
             for c, p in zip(charges, positions_c):
                 if c > 1 :
-                    #sigma2 = 1.4 *sigma
-                    sigma2 = 0.90
+                    sigma2 = parain3  # 0.93
                 else :
-                    #sigma2 = sigma
-                    sigma2 = 0.96
+                    sigma2 = parain4  # 0.92
                 self.density_charge_mo_sub = build_pseudo_density(p, self.grid_sub, scale = c, sigma = sigma2, rcut = rcut,
                         density = self.density_charge_mo_sub, add = True, deriv = 0)
+                if(c < 0.01):
+                    self.density_charge_wall_sub = build_pseudo_density(p, self.grid_sub, scale = scale_neg , sigma = sigma_neg, rcut = rcut,
+                        density = self.density_charge_wall_sub, add = True, deriv = 0)
+                else:
+                    self.density_charge_wall_sub = build_pseudo_density(p, self.grid_sub, scale = scale_pos, sigma = sigma_pos, rcut = rcut,
+                        density = self.density_charge_wall_sub, add = True, deriv = 0)
+
         else :
             self.density_charge_mo_sub = self.density_charge_sub
+        
+        # To keep initial dipole density #jezs
+        self.qm_induced_dm_sub = Field(grid = self.grid_sub, rank=self.nspin)
+        self.qm_induced_dm_sub[:] = 0
+
         #-----------------------------------------------------------------------
         if len(inds_m) > 0 :
-            self.subcell.ions.pos[inds_o] = pos_m
+            self.subcell.ions.positions[inds_o] = pos_m
         #-----------------------------------------------------------------------
         sprint('charges :\n', charges, comm = self.comm)
-        # self.density_charge_sub.write('1_pseudo_density_charge.xsf', ions = self.subcell.ions)
         self.density_sub = self.subcell.density
         self.gaussian_density_sub = self.subcell.gaussian_density
         self.core_density_sub = self.subcell.core_density
         self.core_density = self.core_density_sub.gather(grid = self.grid)
         self.density_charge = self.density_charge_sub.gather(grid = self.grid)
         self.density_charge_mo = self.density_charge_mo_sub.gather(grid = self.grid)
-        # self.density_charge_sub.write('sub_c_1.xsf', ions = self.subcell.ions)
-        # self.density_charge_mo_sub.write('sub_c_1_2.xsf', ions = self.subcell.ions)
+        self.density_charge_wall = self.density_charge_wall_sub.gather(grid = self.grid)
+        self.qm_induced_dm = self.qm_induced_dm_sub.gather(grid = self.grid)
 
     @print2file()
     def get_energy(self, olevel = 0, **kwargs):
@@ -705,67 +747,134 @@ class DriverMM(DriverKS):
     def get_energy_potential(self, density = None, calcType = ['E', 'V'], olevel = 1, **kwargs):
         func = Functional(name = 'ZERO', energy=0.0, potential=None)
         if olevel == 0 :
-            self.engine.set_extpot(self.evaluator.global_potential / self.engine.units['energy'], **kwargs)
-        # if 'V' in calcType :
-            # pot = self.engine.get_potential(grid = self.grid_driver, **kwargs) * self.engine.units['energy']
-            # func.potential = self._format_field_invert(pot)
+            # XIn Chen modified, only electrostatic potential
+            self.engine.set_extpot(nadfield=self.field_NAD,extpot=self.evaluator.global_potential_ele / self.engine.units['energy'], **kwargs)
         if 'E' in calcType :
-            energy = self.engine.get_energy(olevel = olevel) * self.engine.units['energy']
-            func.energy = energy
-            func.energy = func.energy + self.MMpenalty_energy
+            energy = self.engine.get_energy(olevel = olevel) * self.engine.units['energy'] 
+            func.energy = energy + self.MMpenalty_energy 
             if self.comm.rank > 0 : func.energy = 0.0
             self._iter += 1
             fstr = f'sub_energy({self.prefix}): {self._iter}  {func.energy}'
-            # self.write_stdout(fstr)
             sprint(fstr, comm = self.comm)
         return func
 
     @print2file()
-    def get_density(self, rcut = 10, sigma = 1.7, **kwargs):
-        #
-        #-----------------------------------------------------------------------
-        # if self.comm.rank == 0 :
-            # from edftpy.io import read_density
-            # self.density[:] = read_density('sub_mbx_0.xsf')
-            # self.density_charge[:] = self.density
-        # return self.density
-        #-----------------------------------------------------------------------
-        self.engine.set_extpot(self.evaluator.global_potential / self.engine.units['energy'], **kwargs)
-        #
+    def get_density(self, rcut = 10, sigma = 1.4, **kwargs):
+
+        if exists('para.inp'):
+          parain = open('para.inp','r').readlines()[0].split()
+          sigmaO  = float(parain[4]) # O
+          sigmaH  = float(parain[5]) # H
+          DP_pen_O  = float(parain[6]) # O 18
+          DP_pen_H  = float(parain[7]) # H 36
+          dip_density_0 = int(parain[8]) #if 0 print initial dipole density
+        else:   #mb-pbe default
+          sigmaO  = 1.60 
+          sigmaH  = 1.60
+          DP_pen_O  =  7.5
+          DP_pen_H  =  7.5
+          dip_density_0 = 1
+
+        sprint('Dipole Density parameters: ',sigmaO, sigmaH, DP_pen_O, DP_pen_H, comm = self.comm)
+
+        # Xin chen modified. only electrostatic potential to MM part
+
+        charges, positions_c = self.engine.get_charges()
+        #sub_dens = Field(grid = self.grid_sub, rank=self.nspin)
+
+        field_NADt = []
+
+        self.field_NAD=0
+        self.engine.set_extpot(nadfield=self.field_NAD, extpot=self.evaluator.global_potential_ele / self.engine.units['energy'], **kwargs)
+
         dipoles, positions_d = self.engine.get_dipoles()
-        sprint('dipoles0 :\n', dipoles, comm = self.comm)
+        dipoles = np.asarray(dipoles)
+
+        charges, positions_c = self.engine.get_charges()
+        charges = np.asarray(charges)
+        charges = self.engine.get_points_zval() - charges
+
         positions_d = positions_d*self.engine.units['length']
         dipoles = dipoles*self.engine.units['length']
+        
         #-----------------------------------------------------------------------
         if self.comm.size > 1 :
             dipoles = self.comm.bcast(dipoles, root = 0)
             positions_d = self.comm.bcast(positions_d, root = 0)
-        # dip = np.loadtxt('edftpy_mm_dipole.txt').reshape((-1,3))
-        # dipoles[:3] = dip[:3]
-        # dipoles[:] = 0.0
-        sprint('dipoles :\n', dipoles, comm = self.comm)
 
         # Get updated dipole (induced by QM and MM part)
         self.QMMM_dp =dipoles
 
-        Dp_length =(self.QMMM_dp[:,0]-self.MM_dp0[:,0])**2 +\
-                   (self.QMMM_dp[:,1]-self.MM_dp0[:,1])**2 +\
-                   (self.QMMM_dp[:,2]-self.MM_dp0[:,2])**2
+        #sprint('Dipoles :\n', dipoles, comm = self.comm)
+
+        Dp_length1 = (self.QMMM_dp[:,0] - self.MM_dp0[:,0])**2+\
+                     (self.QMMM_dp[:,1] - self.MM_dp0[:,1])**2+\
+                     (self.QMMM_dp[:,2] - self.MM_dp0[:,2])**2
+        #sprint('Dipoles_length :\n', Dp_length1, comm = self.comm)
+
+        sprint('Induced Dipoles : \n', self.QMMM_dp, comm = self.comm)
+        sprint('Initial Dipoles : \n', self.MM_dp0, comm = self.comm)
+
+        Dp_length = Dp_length1*0.0
+
+        Dp_length[::4]  = Dp_length1[::4]*DP_pen_O
+        Dp_length[1::4] = Dp_length1[1::4]*DP_pen_H
+        Dp_length[2::4] = Dp_length1[2::4]*DP_pen_H
+
+        DP_len_O = Dp_length1[::4]
+        DP_len_H = Dp_length1[1::4] + Dp_length1[2::4]
+
         # sqrt is ignored. 
-        self.MMpenalty_energy = np.sum(Dp_length)*12/627.51
-        sprint("MM distorsion energy (Hartree):",self.MMpenalty_energy,comm = self.comm)
+        penalty = np.sum(Dp_length)/self.engine.units['kcal/mol']
+
+        sprint("MM penalty energy (Hartree):", penalty, comm = self.comm)
+        self.MMpenalty_energy = penalty
+
         #-----------------------------------------------------------------------
         self.density_sub[:] = 0.0
-        # self.density_sub[:] = self.density_charge_sub
-        for c, p in zip(dipoles, positions_d):
-            self.density_sub = build_pseudo_density(p, self.grid_sub, scale = c, sigma = sigma, rcut = rcut,
+        self.qm_induced_dm_sub[:] = 0.0
+
+        for charge, d, d0, p in zip(charges, dipoles, self.MM_dp0, positions_d):
+            if charge > 1 :
+                sigma = sigmaO  # 0.93
+            else :
+                sigma = sigmaH  # 0.92
+            self.density_sub   = build_pseudo_density(p, self.grid_sub, scale  = d, sigma = sigma, rcut = rcut*4,
                     density = self.density_sub, add = True, deriv = 1)
+            if dip_density_0 == 0:
+               if exists('dp_mm0.xsf'):
+                  None
+               else:
+                  self.qm_induced_dm_sub = build_pseudo_density(p, self.grid_sub,
+                                         scale  = d0, sigma = sigma,rcut = rcut*4,
+                                         density = self.density_sub, add = True, deriv = 1)
+        if dip_density_0 == 0:
+          if exists('dp_mm0.xsf'):
+              None
+          else:
+              self.qm_induced_dm_sub.write('dp_mm0.xsf', ions = self.subcell.ions)
+              # To remove dipole
+              self.qm_induced_dm_sub.gather(out = self.qm_induced_dm, root = 0)
+
+        # To remove dipole
         self.density_sub.gather(out = self.density, root = 0)
-        # self.density_sub.write('1_density_charge.xsf', ions = self.subcell.ions)
+
         return self.density
 
     @print2file()
     def get_density_v0(self, rcut = 10, sigma = 0.6, **kwargs):
+        if exists('para.inp'):
+           parain = open('para.inp','r').readlines()[0].split()
+           parain1 = float(parain[0])
+           parain2 = float(parain[1])
+           sigmaO  = float(parain[4]) # O
+           sigmaH  = float(parain[5]) # H
+        else:    #mb-pbe default
+           parain1 =  0.85
+           parain2 =  0.305
+           sigmaO  = 1.60
+           sigmaH  = 1.60
+
         charges, positions_c = self.engine.get_charges()
         charges = self.engine.get_points_zval() - charges
         dipoles, positions_d = self.engine.get_dipoles()
@@ -774,22 +883,31 @@ class DriverMM(DriverKS):
         positions_d = positions_d*self.engine.units['length']
         dipoles = dipoles*self.engine.units['length']
         #-----------------------------------------------------------------------
+
         self.density[:] = 0.0
         for c, p in zip(charges, positions_c):
             if c > 1 :
-                sigma2 = 1.4 *sigma
+                sigma2 = parain1
             else :
-                sigma2 = sigma
+                sigma2 = parain2
             self.density = build_pseudo_density(p, self.grid, scale = c, sigma = sigma2, rcut = rcut,
                     density = self.density, add = True, deriv = 0)
-        for c, p in zip(dipoles, positions_d):
-            self.density = build_pseudo_density(p, self.grid, scale = c, sigma = sigma, rcut = rcut,
+
+        for c, d, p in zip(charges, dipoles, positions_d):
+            if c > 1 :
+                sigma2 = sigmaO  
+            else :
+                sigma2 = sigmaH  
+            self.density = build_pseudo_density(p, self.grid, scale = d, sigma = sigma2, rcut = rcut,
                     density = self.density, add = True, deriv = 1)
         #
-        sprint('charges :\n', charges, comm = self.comm)
-        sprint('dipoles :\n', dipoles, comm = self.comm)
+        sprint('Charges :\n', charges, comm = self.comm)
+        sprint('Dipoles :\n', dipoles, comm = self.comm)
         return self.density
 
+    def get_forces(self,**kwargs):
+        forces = self.engine.get_forces()
+        return forces
 
 class DriverOF:
     def __init__(self, engine = None, **kwargs):
