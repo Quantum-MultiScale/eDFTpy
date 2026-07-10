@@ -19,6 +19,45 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y autoconf libfftw3-dev libgsl-dev
+
+      - name: Install DFTpy
+        run: |
+          git clone -b mpi2 https://github.com/Quantum-MultiScale/DFTpy.git
+          cd DFTpy
+          python -m pip install .
+          cd ..
+
+      - name: Install MBX
+        run: |
+          git clone https://gitlab.com/xinchen_compchem/mbx-python-old.git
+          cd mbx-python-old
+
+          autoreconf -fi
+          ./configure --disable-optimization --enable-shared
+
+          make -j$(nproc)
+          make install
+
+          echo "MBX_HOME=$PWD" >> $GITHUB_ENV
+          echo "PYTHONPATH=$PWD/plugins/python:$PYTHONPATH" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=$PWD/lib:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+
+      - name: Verify MBX installation
+        run: |
+          python - <<EOF
+          import sys
+          print("Python executable:", sys.executable)
+          print("PYTHONPATH:")
+          for p in sys.path:
+              print(" ", p)
+          import mbx
+          print("MBX successfully imported.")
+          EOF
+
       - name: Install eDFTpy
         run: |
           python -m pip install .
@@ -35,7 +74,9 @@ jobs:
           export MPIRUN="mpirun --allow-run-as-root --oversubscribe -n 4"
 
           for d in $(find ./mpitest/ -maxdepth 1 -mindepth 1 -type d); do
+            echo "======================================"
             echo "Running MPI test in $d"
+            echo "======================================"
             cd "$d"
             ./run.sh
             cd ../..
