@@ -26,6 +26,7 @@ jobs:
 
       - name: Install DFTpy
         run: |
+          git config --global --add safe.directory '*'
           git clone https://github.com/Quantum-MultiScale/DFTpy.git
           git checkout a8abae5156604519c78b1a0977f51d75c6419029
           cd DFTpy
