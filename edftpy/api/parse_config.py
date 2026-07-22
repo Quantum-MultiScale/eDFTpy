@@ -544,9 +544,7 @@ def config2embed_evaluator(config, keysys, ions, grid, pplist = None, cell_chang
     pme = config["MATH"]["linearie"]
 
     ke_kwargs = config[keysys]["kedf"].copy()
-    #embed = config[keysys]["embed"].upper()
-    embed = [element.upper() for element in config[keysys]["embed"]]
-
+    embed = config[keysys]["embed"]
     exttype = config[keysys]["exttype"]
 
     opt_options = config[keysys]["opt"].copy()
@@ -600,8 +598,7 @@ def config2evaluator_of(config, keysys, ions=None, grid=None, pplist = None, gsy
     xc_kwargs = config[keysys]["exc"].copy()
     pme = config["MATH"]["linearie"]
 
-    #embed = config[keysys]["embed"]
-    embed = [element.upper() for element in config[keysys]["embed"]]
+    embed = config[keysys]["embed"]
     exttype = config[keysys]["exttype"]
 
     opt_options = config[keysys]["opt"].copy()

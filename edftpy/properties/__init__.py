@@ -46,7 +46,7 @@ def get_total_energies(gsystem = None, drivers = None, density = None, total_ene
         total_energy = gsystem.total_evaluator(density, calcType = ['E'], olevel = olevel).energy
         # print("Total energy = ", total_energy,  olevel)
 
-    if after_scf :
+    if after_scf:
         elist = []
         #-----------------------------------------------------------------------
         # The tHARTREE AND PSEUDO ARE already a global quantity and is replicated on all
@@ -86,6 +86,7 @@ def get_total_energies(gsystem = None, drivers = None, density = None, total_ene
             ene = driver.energy
         elist.append(ene)
     if len(others) > 0 :
+        # print("Others:", others, "Olevel: ", olevel)
         for item in others :
             elist.append(item)
     elist = np.asarray(elist)

@@ -104,33 +104,81 @@ class Optimization(object):
         elist = get_total_energies(gsystem = self.gsystem, drivers = self.drivers, density = density,
                 total_energy= total_energy, update = update, olevel = olevel, others = others, **kwargs)
         return sum(elist)
+    
+    def _prepare_energy_dict(self, edict, gsystem = None):
+        if gsystem is None:
+            gsystem = self.gsystem
+        if gsystem.grid.mp.rank == 0:
+            edict['HARTREE'].energy = edict['HARTREE'].energy
+            edict['PSEUDO'].energy = edict['PSEUDO'].energy
+        else:
+            edict['HARTREE'].energy = 0.0
+            edict['PSEUDO'].energy = 0.0
+        return edict
 
+    def _get_total_energy(self, edict, gsystem = None):
+        if gsystem is None:
+            gsystem = self.gsystem
+        total_energy = edict['EWALD'].energy + edict['XC'].energy + edict['KE'].energy
+        if gsystem.grid.mp.rank == 0:
+            total_energy += edict['HARTREE'].energy + edict['PSEUDO'].energy
+        return total_energy
+    
     def get_energy_qmmm_int(self, olevel = 0, split = False, **kwargs):
+
+        '''During the SCF olevel always bigger than zero.'''
+
         if olevel > 0 :
             eint = 0.0
         else :
-            edict_qmmm = self.gsystem_qmmm.total_evaluator(self.gsystem_qmmm.density, calcType = ['E'], split = split, olevel = 0)
-            edict_qm = self.gsystem.total_evaluator(self.gsystem.density, calcType = ['E'], split = split, olevel = 0)
-            edict_mm = self.gsystem_mm.total_evaluator(self.gsystem_mm.density, calcType = ['E'], split = split, olevel = 0)
+            edict_qmmm = self.gsystem_qmmm.total_evaluator(self.gsystem_qmmm.density, calcType = ['E'], split = True, olevel = olevel)
+            edict_qm = self.gsystem.total_evaluator(self.gsystem.density, calcType = ['E'], split = True, olevel = olevel)
+            edict_mm = self.gsystem_mm.total_evaluator(self.gsystem_mm.density, calcType = ['E'], split = True, olevel = olevel)
+            # rank = self.gsystem.grid.mp.rank
+            
+            edict_qmmm = self._prepare_energy_dict(edict_qmmm, self.gsystem_qmmm)
+            edict_qm = self._prepare_energy_dict(edict_qm, self.gsystem)
+            edict_mm = self._prepare_energy_dict(edict_mm, self.gsystem_mm)
+            
             if split :
                 eint = {}
                 keys_qmmm = list(edict_qmmm.keys())
                 for k in keys_qmmm :
-                    v = [edict_qmmm[k].energy, edict_qm[k].energy, edict_mm[k].energy]
+                    if k == 'TOTAL':
+                        v = [self._get_total_energy(edict_qmmm, self.gsystem_qmmm),
+                             self._get_total_energy(edict_qm, self.gsystem),
+                             self._get_total_energy(edict_mm, self.gsystem_mm)]
+                    else :
+                        v = [edict_qmmm[k].energy, edict_qm[k].energy, edict_mm[k].energy]
+                        
                     eint[k] = v
+                    # sprint("Energy of {} : {}".format(k, v))
+                    # sprint('Density: ', rank,
+                    #       self.gsystem_qmmm.density.integral(),
+                    #       self.gsystem.density.integral(),
+                    #       self.gsystem_mm.density.integral(),
+                    #       np.max(self.gsystem_qmmm.density),
+                    #       np.max(self.gsystem.density),
+                    #       np.max(self.gsystem_mm.density))
+                    # sprint('Density: ',rank, self.gsystem_qmmm.density.integral(), self.gsystem.density.integral(), self.gsystem_mm.density.integral())
             else :
-                eint = edict_qmmm.energy - edict_qm.energy - edict_mm.energy
+                eint = self._get_total_energy(edict_qmmm, self.gsystem_qmmm) - self._get_total_energy(edict_qm, self.gsystem) - self._get_total_energy(edict_mm, self.gsystem_mm)
             #-----------------------------------------------------------------------
             # Only for test duo-density, later need update !!!
-            edict_qmmm = self.gsystem_qmmm.total_evaluator(self.gsystem_qmmm.gaussian_density, calcType = ['E'], split = split, olevel = 0)
-            edict_qm = self.gsystem.total_evaluator(self.gsystem.density, calcType = ['E'], split = split, olevel = 0)
-            edict_mm = self.gsystem_mm.total_evaluator(self.gsystem_mm.gaussian_density, calcType = ['E'], split = split, olevel = 0)
+            edict_qmmm = self.gsystem_qmmm.total_evaluator(self.gsystem_qmmm.gaussian_density, calcType = ['E'], split = True, olevel = olevel)
+            edict_qm = self.gsystem.total_evaluator(self.gsystem.density, calcType = ['E'], split = True, olevel = olevel)
+            edict_mm = self.gsystem_mm.total_evaluator(self.gsystem_mm.gaussian_density, calcType = ['E'], split = True, olevel = olevel)
+            edict_qmmm = self._prepare_energy_dict(edict_qmmm, self.gsystem_qmmm)
+            edict_qm = self._prepare_energy_dict(edict_qm, self.gsystem)
+            edict_mm = self._prepare_energy_dict(edict_mm, self.gsystem_mm)
             if split :
                 for k in ['XC', 'KE'] :
                     v = [edict_qmmm[k].energy, edict_qm[k].energy, edict_mm[k].energy]
                     for i in range(3):
+                        # sprint('Total diff '+k+' : ',v[i] - eint[k][i])
                         eint['TOTAL'][i] += v[i] - eint[k][i]
                     eint[k] = v
+                    # sprint("Energy of {} : {}".format(k, v))
             #-----------------------------------------------------------------------
         return eint
 
@@ -867,7 +915,15 @@ class Optimization(object):
         diff_res = np.zeros(self.nsub)
         for i, driver in enumerate(self.drivers):
             if driver is not None :
-                diff_res[i] = driver.residual_norm
+                if driver.comm.rank == 0:
+                    diff_res[i] = driver.residual_norm
+                else:
+                    diff_res[i] = 0.0
+                # diff_res[i] = driver.residual_norm
+                # sprint('rank', driver.comm.rank, 'subcell', i, 
+                #         'residual_norm', driver.residual_norm,
+                #         'subcell_natoms', driver.subcell.ions.nat,
+                #         'total_natoms', self.gsystem.ions.nat)
         diff_res = self.gsystem.grid.mp.vsum(diff_res)
         return diff_res
 
@@ -875,7 +931,15 @@ class Optimization(object):
         dp_norm = np.zeros(self.nsub)
         for i, driver in enumerate(self.drivers):
             if driver is not None :
-                dp_norm[i] = driver.dp_norm
+                if driver.comm.rank == 0:
+                    dp_norm[i] = driver.dp_norm
+                else:
+                    dp_norm[i] = 0.0
+                # dp_norm[i] = driver.dp_norm
+                # sprint('rank', driver.comm.rank, 'subcell', i, 
+                #         'dp_norm', driver.dp_norm,
+                #         'subcell_natoms', driver.subcell.ions.nat,
+                #         'total_natoms', self.gsystem.ions.nat)
         dp_norm = self.gsystem.grid.mp.vsum(dp_norm)
         return dp_norm
 
@@ -1024,13 +1088,7 @@ class Optimization(object):
                 # total_energy = total_func.energy.copy()
         else :
             edict = self.gsystem.total_evaluator(self.gsystem.density, calcType = ['E'], split = True, olevel = 0)
-            if self.gsystem.grid.mp.rank == 0:
-                edict['HARTREE'].energy = edict['HARTREE'].energy
-                edict['PSEUDO'].energy = edict['PSEUDO'].energy
-            else:
-                edict['HARTREE'].energy = 0.0
-                edict['PSEUDO'].energy = 0.0
-
+            edict = self._prepare_energy_dict(edict)
             total_energy = edict.pop('TOTAL').energy
             # print(self.gsystem.grid.mp.rank, "Energy dictionary:")
             # for key, value in edict.items():
@@ -1038,7 +1096,7 @@ class Optimization(object):
 
         others = []
         if self.sdft == 'qmmm' :
-            edict_qmmm = self.get_energy_qmmm_int(olevel = 0, split = True)
+            edict_qmmm = self.get_energy_qmmm_int(olevel = 0, split = True)            
             v = edict_qmmm['TOTAL']
             eint = v[0]-v[1]-v[2]
             others.append(eint)
