@@ -4,6 +4,20 @@
 Installation
 ============
 
+.. raw:: html
+
+    <h2>Step by Step Installation</h2>
+
+The Pavanello Research Group has developed a step-by-step installation guide to help new or non-experienced users with the installation of the eDFTpy package tested in Ubuntu/Debian, CentOS/RedHat, and Amarel environments. 
+
+Would you like to check the installation guide? :ref:`Click Here<step_by_step>`
+
+.. toctree::
+   :hidden:
+   :maxdepth: 2
+
+   stpbystp
+
 Requirements
 ============
 
@@ -38,11 +52,8 @@ Optional:
 .. _f90wrap: https://github.com/jameskermode/f90wrap
 
 
-Installation from source
-========================
-
-Git:
-----------
+Installation from source using Git
+==================================
 
     You can get the source from gitlab like this::
 
@@ -58,11 +69,4 @@ Git:
 .. note::
 
     Because ``eDFTpy`` still under active development, non-backward-compatible changes can happen at any time. Please, clone the lastest release often.
-
-Step by Step Installation
-=========================
-
-Pavanello Reseach Group has developed and step by step installation guide which has the goal to help the new or non-experienced users with the installation of eDFTpy package tested in Ubuntu/Debian and CentOS/RedHat based systems. 
-
-Would you like to check the installation guide? :ref:`Click Here<step_by_step>`
 
