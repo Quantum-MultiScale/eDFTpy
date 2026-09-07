@@ -1,0 +1,19 @@
+&SYSTEM
+   ibrav            = 0
+   nat              = 3
+   ntyp             = 1
+   ecutwfc          = 40
+   ecutrho          = 400
+   nosym            = .true.
+   occupations      = 'smearing'
+   degauss          = 0.001
+   smearing         = 'gaussian'
+/
+&ELECTRONS
+   electron_maxstep = 1
+   conv_thr         = 1E-8
+/
+ATOMIC_SPECIES
+Cl 35.45 cl_pbe_v1.4.uspp.F.UPF
+HUBBARD (atomic)
+U Cl-3p 1.0 

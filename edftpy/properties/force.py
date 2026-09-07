@@ -3,8 +3,17 @@ import numpy as np
 from edftpy.mpi import sprint
 
 def get_total_forces(drivers = None, gsystem = None, linearii=True, shift = True):
-    forces = gsystem.get_forces(linearii = linearii)
-    # sprint('Total forces0 : \n', forces)
+    # Global force: EWALD + local-PP + XC on the total density. This
+    # value is REPLICATED on every MPI rank. Because the per-atom forces are
+    # assembled with a final mp.vsum() over the global communicator, adding the
+    # global force on every rank would count it nranks times. Add it on the
+    # global root rank only, so it enters the reduction exactly once.
+    # forces = gsystem.get_forces(linearii = linearii) 
+    global_forces = gsystem.get_forces(linearii = linearii)
+    forces = np.zeros_like(global_forces)
+    if gsystem.grid.mp.rank == 0 :
+        forces[:] = global_forces
+    sprint('Total forces0 : \n', global_forces)
     for i, driver in enumerate(drivers):
         if driver is None : continue
         fs = driver.get_forces()

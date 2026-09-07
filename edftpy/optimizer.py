@@ -51,6 +51,10 @@ class Optimization(object):
         self.density_prev = None
         self.converged = False
         self.observers = []
+        # Impurity model (charged fragments): set by config2optimizer from the config
+        # (identical on every rank) when any SUB uses mt_neutral_potential. Enables the
+        # extra, live Hartree-only global potential tracked in set_global_potential_sdft.
+        self.has_impurity_model = False
         #-----------------------------------------------------------------------
         if self.sdft == 'scdft' :
             if self.mixer is None :
@@ -104,33 +108,81 @@ class Optimization(object):
         elist = get_total_energies(gsystem = self.gsystem, drivers = self.drivers, density = density,
                 total_energy= total_energy, update = update, olevel = olevel, others = others, **kwargs)
         return sum(elist)
+    
+    def _prepare_energy_dict(self, edict, gsystem = None):
+        if gsystem is None:
+            gsystem = self.gsystem
+        if gsystem.grid.mp.rank == 0:
+            edict['HARTREE'].energy = edict['HARTREE'].energy
+            edict['PSEUDO'].energy = edict['PSEUDO'].energy
+        else:
+            edict['HARTREE'].energy = 0.0
+            edict['PSEUDO'].energy = 0.0
+        return edict
 
+    def _get_total_energy(self, edict, gsystem = None):
+        if gsystem is None:
+            gsystem = self.gsystem
+        total_energy = edict['EWALD'].energy + edict['XC'].energy + edict['KE'].energy
+        if gsystem.grid.mp.rank == 0:
+            total_energy += edict['HARTREE'].energy + edict['PSEUDO'].energy
+        return total_energy
+    
     def get_energy_qmmm_int(self, olevel = 0, split = False, **kwargs):
+
+        '''During the SCF olevel always bigger than zero.'''
+
         if olevel > 0 :
             eint = 0.0
         else :
-            edict_qmmm = self.gsystem_qmmm.total_evaluator(self.gsystem_qmmm.density, calcType = ['E'], split = split, olevel = 0)
-            edict_qm = self.gsystem.total_evaluator(self.gsystem.density, calcType = ['E'], split = split, olevel = 0)
-            edict_mm = self.gsystem_mm.total_evaluator(self.gsystem_mm.density, calcType = ['E'], split = split, olevel = 0)
+            edict_qmmm = self.gsystem_qmmm.total_evaluator(self.gsystem_qmmm.density, calcType = ['E'], split = True, olevel = olevel)
+            edict_qm = self.gsystem.total_evaluator(self.gsystem.density, calcType = ['E'], split = True, olevel = olevel)
+            edict_mm = self.gsystem_mm.total_evaluator(self.gsystem_mm.density, calcType = ['E'], split = True, olevel = olevel)
+            # rank = self.gsystem.grid.mp.rank
+            
+            edict_qmmm = self._prepare_energy_dict(edict_qmmm, self.gsystem_qmmm)
+            edict_qm = self._prepare_energy_dict(edict_qm, self.gsystem)
+            edict_mm = self._prepare_energy_dict(edict_mm, self.gsystem_mm)
+            
             if split :
                 eint = {}
                 keys_qmmm = list(edict_qmmm.keys())
                 for k in keys_qmmm :
-                    v = [edict_qmmm[k].energy, edict_qm[k].energy, edict_mm[k].energy]
+                    if k == 'TOTAL':
+                        v = [self._get_total_energy(edict_qmmm, self.gsystem_qmmm),
+                             self._get_total_energy(edict_qm, self.gsystem),
+                             self._get_total_energy(edict_mm, self.gsystem_mm)]
+                    else :
+                        v = [edict_qmmm[k].energy, edict_qm[k].energy, edict_mm[k].energy]
+                        
                     eint[k] = v
+                    # sprint("Energy of {} : {}".format(k, v))
+                    # sprint('Density: ', rank,
+                    #       self.gsystem_qmmm.density.integral(),
+                    #       self.gsystem.density.integral(),
+                    #       self.gsystem_mm.density.integral(),
+                    #       np.max(self.gsystem_qmmm.density),
+                    #       np.max(self.gsystem.density),
+                    #       np.max(self.gsystem_mm.density))
+                    # sprint('Density: ',rank, self.gsystem_qmmm.density.integral(), self.gsystem.density.integral(), self.gsystem_mm.density.integral())
             else :
-                eint = edict_qmmm.energy - edict_qm.energy - edict_mm.energy
+                eint = self._get_total_energy(edict_qmmm, self.gsystem_qmmm) - self._get_total_energy(edict_qm, self.gsystem) - self._get_total_energy(edict_mm, self.gsystem_mm)
             #-----------------------------------------------------------------------
             # Only for test duo-density, later need update !!!
-            edict_qmmm = self.gsystem_qmmm.total_evaluator(self.gsystem_qmmm.gaussian_density, calcType = ['E'], split = split, olevel = 0)
-            edict_qm = self.gsystem.total_evaluator(self.gsystem.density, calcType = ['E'], split = split, olevel = 0)
-            edict_mm = self.gsystem_mm.total_evaluator(self.gsystem_mm.gaussian_density, calcType = ['E'], split = split, olevel = 0)
+            edict_qmmm = self.gsystem_qmmm.total_evaluator(self.gsystem_qmmm.gaussian_density, calcType = ['E'], split = True, olevel = olevel)
+            edict_qm = self.gsystem.total_evaluator(self.gsystem.density, calcType = ['E'], split = True, olevel = olevel)
+            edict_mm = self.gsystem_mm.total_evaluator(self.gsystem_mm.gaussian_density, calcType = ['E'], split = True, olevel = olevel)
+            edict_qmmm = self._prepare_energy_dict(edict_qmmm, self.gsystem_qmmm)
+            edict_qm = self._prepare_energy_dict(edict_qm, self.gsystem)
+            edict_mm = self._prepare_energy_dict(edict_mm, self.gsystem_mm)
             if split :
                 for k in ['XC', 'KE'] :
                     v = [edict_qmmm[k].energy, edict_qm[k].energy, edict_mm[k].energy]
                     for i in range(3):
+                        # sprint('Total diff '+k+' : ',v[i] - eint[k][i])
                         eint['TOTAL'][i] += v[i] - eint[k][i]
                     eint[k] = v
+                    # sprint("Energy of {} : {}".format(k, v))
             #-----------------------------------------------------------------------
         return eint
 
@@ -521,7 +573,43 @@ class Optimization(object):
                         factor = np.maximum((global_density - driver.density)/global_density ** 2, 0.0)
                         factor = np.minimum(factor, 1E6)
                         global_potential += factor * energydensity
+        if self.has_impurity_model :
+            self._set_global_hartree_potential()
         return
+
+    def _set_global_hartree_potential(self):
+        """
+        Impurity model (charged fragments). Tracks a live, per-SCF-iteration Hartree-ONLY
+        slice of the periodic global potential, refreshed every iteration in parallel with
+        global_potential above, so EmbedEvaluator can directly replace it with the static
+        neutral-reference screening (neutral_screen_potential) - see
+        EmbedEvaluator.get_embed_potential for the exact substitution.
+
+        gsystem.total_evaluator's 'HARTREE' functional is always a plain, periodic
+        Hartree() (config2total_evaluator only ever gives GSYSTEM's own Hartree an mt
+        screening if GSYSTEM itself were built with mt=True, which config2optimizer never
+        does - GSYSTEM is always periodic), and self.density is exactly the density
+        get_embed_potential above builds global_potential from (both branches, mixer or
+        not). So calling that same functional object directly on self.density reproduces
+        exactly the Hartree component already summed into global_potential, with no need
+        to strip/restore the other funcdicts (unlike the one-shot post-hoc equivalent in
+        interface.py, which does need that dance because it reuses the combined
+        total_evaluator.embed_potential rather than calling funcdicts['HARTREE'] directly).
+        """
+        hartree_func = self.gsystem.total_evaluator.funcdicts.get('HARTREE', None)
+        if hartree_func is None : return
+        hartree_potential_full = hartree_func(self.density, calcType = ['V']).potential
+        for isub in range(self.nsub):
+            driver = self.drivers[isub]
+            if driver is None :
+                global_hartree = None
+            elif driver.technique == 'OF' :
+                continue
+            else :
+                if driver.evaluator.global_hartree_potential is None :
+                    driver.evaluator.global_hartree_potential = np.zeros_like(driver.density)
+                global_hartree = driver.evaluator.global_hartree_potential
+            self.gsystem.sub_value(hartree_potential_full, global_hartree, isub = isub)
 
     def set_global_potential_pdft(self, approximate = 'same', **kwargs):
         r"""
@@ -867,7 +955,15 @@ class Optimization(object):
         diff_res = np.zeros(self.nsub)
         for i, driver in enumerate(self.drivers):
             if driver is not None :
-                diff_res[i] = driver.residual_norm
+                if driver.comm.rank == 0:
+                    diff_res[i] = driver.residual_norm
+                else:
+                    diff_res[i] = 0.0
+                # diff_res[i] = driver.residual_norm
+                # sprint('rank', driver.comm.rank, 'subcell', i, 
+                #         'residual_norm', driver.residual_norm,
+                #         'subcell_natoms', driver.subcell.ions.nat,
+                #         'total_natoms', self.gsystem.ions.nat)
         diff_res = self.gsystem.grid.mp.vsum(diff_res)
         return diff_res
 
@@ -875,7 +971,15 @@ class Optimization(object):
         dp_norm = np.zeros(self.nsub)
         for i, driver in enumerate(self.drivers):
             if driver is not None :
-                dp_norm[i] = driver.dp_norm
+                if driver.comm.rank == 0:
+                    dp_norm[i] = driver.dp_norm
+                else:
+                    dp_norm[i] = 0.0
+                # dp_norm[i] = driver.dp_norm
+                # sprint('rank', driver.comm.rank, 'subcell', i, 
+                #         'dp_norm', driver.dp_norm,
+                #         'subcell_natoms', driver.subcell.ions.nat,
+                #         'total_natoms', self.gsystem.ions.nat)
         dp_norm = self.gsystem.grid.mp.vsum(dp_norm)
         return dp_norm
 
@@ -1024,11 +1128,15 @@ class Optimization(object):
                 # total_energy = total_func.energy.copy()
         else :
             edict = self.gsystem.total_evaluator(self.gsystem.density, calcType = ['E'], split = True, olevel = 0)
+            edict = self._prepare_energy_dict(edict)
             total_energy = edict.pop('TOTAL').energy
+            # print(self.gsystem.grid.mp.rank, "Energy dictionary:")
+            # for key, value in edict.items():
+            #     print(self.gsystem.grid.mp.rank, key, value.energy)
 
         others = []
         if self.sdft == 'qmmm' :
-            edict_qmmm = self.get_energy_qmmm_int(olevel = 0, split = True)
+            edict_qmmm = self.get_energy_qmmm_int(olevel = 0, split = True)            
             v = edict_qmmm['TOTAL']
             eint = v[0]-v[1]-v[2]
             others.append(eint)

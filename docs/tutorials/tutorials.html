@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tutorials &mdash; eDFTpy 0.0.1 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/graphviz.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/panels-main.c949a650a448cc0ae9fd3441c0e17fb0.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/panels-bootstrap.5fd3999ee7762ccc51105388f4a9d115.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/panels-variables.06eb56fa6e07937060861dad626602ad.css" type="text/css" />
+    <link rel="shortcut icon" href="../_static/edftpy.ico"/>
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Run eDFTpy with input files" href="config.html" />
+    <link rel="prev" title="Installation" href="../install.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #bdc3c7" >
+            <a href="../index.html">
+            <img src="../_static/edftpy.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../contact.html">Contact</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Tutorials</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#config-of-edftpy-script">Config of eDFTpy script</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="config.html">Run eDFTpy with input files</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#dftpy">DFTpy</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ofdft/dftpy/dftpy.html">DFTpy: Density Functional Theory with Python</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#quantum-espresso">QUANTUM-ESPRESSO</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ksdft/qe/qe.html">QEpy: Quantum ESPRESSO Python interface</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#sdft-using-edftpy">sDFT using eDFTpy</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="sdft/optimize/optimize.html">Optimization of Density</a></li>
+<li class="toctree-l3"><a class="reference internal" href="sdft/optimize-2/optimize-2.html">Optimization of Density with Heterogeneous susbsystems</a></li>
+<li class="toctree-l3"><a class="reference internal" href="sdft/relax/relax.html">Relaxation of Structure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="sdft/md/md.html">Molecular Dynamics Simulation</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../cmdline.html">Command lines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../releases.html">Stable releases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">Frequently Asked Questions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #bdc3c7" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">eDFTpy</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Tutorials</li>
+      <li class="wy-breadcrumbs-aside">
+        
+			<a href=../genindex.html>Index</a>
+		
+          
+			<a href="https://gitlab.com/pavanello-research-group/edftpy/tree/master/doc/source/tutorials/tutorials.rst">Source</a>
+          
+        
+      </li>
+    
+  </ul><div class="rst-breadcrumbs-buttons" role="navigation" aria-label="Sequential page navigation">
+        <a href="../install.html" class="btn btn-neutral float-left" title="Installation" accesskey="p"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="config.html" class="btn btn-neutral float-right" title="Run eDFTpy with input files" accesskey="n">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+  </div>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<section id="tutorials">
+<span id="id1"></span><h1>Tutorials<a class="headerlink" href="#tutorials" title="Permalink to this headline">¶</a></h1>
+<section id="config-of-edftpy-script">
+<h2>Config of eDFTpy script<a class="headerlink" href="#config-of-edftpy-script" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="config.html">Run eDFTpy with input files</a></li>
+</ul>
+</div>
+</section>
+<section id="dftpy">
+<h2>DFTpy<a class="headerlink" href="#dftpy" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="ofdft/dftpy/dftpy.html">DFTpy: Density Functional Theory with Python</a></li>
+</ul>
+</div>
+</section>
+<section id="quantum-espresso">
+<h2>QUANTUM-ESPRESSO<a class="headerlink" href="#quantum-espresso" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="ksdft/qe/qe.html">QEpy: Quantum ESPRESSO Python interface</a></li>
+</ul>
+</div>
+</section>
+<section id="sdft-using-edftpy">
+<h2>sDFT using eDFTpy<a class="headerlink" href="#sdft-using-edftpy" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="sdft/optimize/optimize.html">Optimization of Density</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="sdft/optimize/optimize.html#input-files">Input Files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sdft/optimize/optimize.html#running-edftpy">Running eDFTpy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sdft/optimize/optimize.html#output-files">Output Files</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="sdft/optimize-2/optimize-2.html">Optimization of Density with Heterogeneous susbsystems</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="sdft/optimize-2/optimize-2.html#input-files">Input Files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sdft/optimize-2/optimize-2.html#running-edftpy">Running eDFTpy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sdft/optimize-2/optimize-2.html#output-files">Output Files</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="sdft/relax/relax.html">Relaxation of Structure</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="sdft/relax/relax.html#input-files">Input files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sdft/relax/relax.html#running-edftpy">Running eDFTpy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sdft/relax/relax.html#output-files">Output files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sdft/relax/relax.html#preliminary-analysis">Preliminary Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sdft/relax/relax.html#restarting-a-relaxation-of-a-structure">Restarting a Relaxation of a structure</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="sdft/md/md.html">Molecular Dynamics Simulation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="sdft/md/md.html#input-files">Input Files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sdft/md/md.html#running-edftpy">Running eDFTpy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sdft/md/md.html#additional-output-files">Additional output Files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sdft/md/md.html#preliminary-analysis">Preliminary Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sdft/md/md.html#restarting-a-md-simulation">Restarting a MD simulation</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../install.html" class="btn btn-neutral float-left" title="Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="config.html" class="btn btn-neutral float-right" title="Run eDFTpy with input files" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Pavanello Research Group.
+      <span class="lastupdated">Last updated on Thursday, 24 Jul 2025 15:13:26.
+      </span></p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+  
+<button onclick="topFunction()" id="btn" title="Go to top">Top</button>
+
+<script>
+var mybutton = document.getElementById("btn");
+
+window.onscroll = function() {scrollFunction()};
+
+function scrollFunction() {
+  if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+    mybutton.style.display = "block";
+  } else {
+    mybutton.style.display = "none";
+  }
+}
+
+function topFunction() {
+  document.body.scrollTop = 0;
+  document.documentElement.scrollTop = 0;
+}
+</script>
+
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

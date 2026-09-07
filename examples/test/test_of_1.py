@@ -88,6 +88,7 @@ class Test(unittest.TestCase):
         ref_energy = self.energy[kedf]
         ref_force1 = self.force[kedf]      # ref. Force for 1st atom should be 1 
         print("method = '{}', kedf = '{}', energy = {}, ref = {}".format(method, kedf, energy, ref_energy))
+        print("method = '{}', kedf = '{}', force = {}, ref = {}".format(method, kedf, force[0][0], ref_force1))
 
         self.assertTrue(np.isclose(energy, ref_energy, rtol = 1E-3))
         self.assertTrue(np.isclose(force[0][0], ref_force1, atol = 1E-3))

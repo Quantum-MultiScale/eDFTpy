@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Relaxation of Structure &mdash; eDFTpy 0.0.1 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/graphviz.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/panels-main.c949a650a448cc0ae9fd3441c0e17fb0.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/panels-bootstrap.5fd3999ee7762ccc51105388f4a9d115.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/panels-variables.06eb56fa6e07937060861dad626602ad.css" type="text/css" />
+    <link rel="shortcut icon" href="../../../_static/edftpy.ico"/>
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="Molecular Dynamics Simulation" href="../md/md.html" />
+    <link rel="prev" title="Optimization of Density with Heterogeneous susbsystems" href="../optimize-2/optimize-2.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #bdc3c7" >
+            <a href="../../../index.html">
+            <img src="../../../_static/edftpy.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../../contact.html">Contact</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../tutorials.html">Tutorials</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials.html#config-of-edftpy-script">Config of eDFTpy script</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials.html#dftpy">DFTpy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials.html#quantum-espresso">QUANTUM-ESPRESSO</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../../tutorials.html#sdft-using-edftpy">sDFT using eDFTpy</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../optimize/optimize.html">Optimization of Density</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../optimize-2/optimize-2.html">Optimization of Density with Heterogeneous susbsystems</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Relaxation of Structure</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#input-files">Input files</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#running-edftpy">Running eDFTpy</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#output-files">Output files</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#preliminary-analysis">Preliminary Analysis</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#restarting-a-relaxation-of-a-structure">Restarting a Relaxation of a structure</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../md/md.html">Molecular Dynamics Simulation</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cmdline.html">Command lines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../releases.html">Stable releases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../faq.html">Frequently Asked Questions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #bdc3c7" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">eDFTpy</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../../tutorials.html">Tutorials</a> &raquo;</li>
+      <li>Relaxation of Structure</li>
+      <li class="wy-breadcrumbs-aside">
+        
+			<a href=../../../genindex.html>Index</a>
+		
+          
+			<a href="https://gitlab.com/pavanello-research-group/edftpy/tree/master/doc/source/tutorials/sdft/relax/relax.rst">Source</a>
+          
+        
+      </li>
+    
+  </ul><div class="rst-breadcrumbs-buttons" role="navigation" aria-label="Sequential page navigation">
+        <a href="../optimize-2/optimize-2.html" class="btn btn-neutral float-left" title="Optimization of Density with Heterogeneous susbsystems" accesskey="p"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../md/md.html" class="btn btn-neutral float-right" title="Molecular Dynamics Simulation" accesskey="n">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+  </div>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<section id="relaxation-of-structure">
+<span id="relax"></span><h1>Relaxation of Structure<a class="headerlink" href="#relaxation-of-structure" title="Permalink to this headline">¶</a></h1>
+<p>This tutorial will guide the user through the general workflow to perform a relaxation of a water dimer by using python based packages such as eDFTpy and the Atomic Simulation Environment (<a class="reference external" href="https://gitlab.com/ase/ase">ASE</a>).</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>To avoid mixing some files, we strongly recommend setup each calculation (e.g. Optimization of density, relaxation of a structure of an MD simulation) in separate folders.</p>
+</div>
+<section id="input-files">
+<h2>Input files<a class="headerlink" href="#input-files" title="Permalink to this headline">¶</a></h2>
+<p>To carry out the relaxation of a structure, you have a set of input files divided in four different types:</p>
+<ul class="simple">
+<li><p>Global system coordinates</p></li>
+<li><p>eDFTpy input file</p></li>
+<li><p>Aditional subsystem configuration</p></li>
+<li><p>ASE input file</p></li>
+</ul>
+<p>Additional to these input files and the same that for the previous SCF tutorials, you also need the pseudopotential files for each of the atomic species described in your global system coordinates input file.</p>
+<section id="global-system-coordinates">
+<h3>Global System Coordinates<a class="headerlink" href="#global-system-coordinates" title="Permalink to this headline">¶</a></h3>
+<p>In this tutorial, we are going to use the same global system structure provided in the second optimization of densitytutorial composed of a binary salt (NaCl) molecule surrounded by a water dimer.</p>
+<details class="sphinx-bs dropdown card mb-3">
+<summary class="summary-title card-header">
+salt_h2o_2.xyz<div class="summary-down docutils">
+<svg version="1.1" width="24" height="24" class="octicon octicon-chevron-down" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M5.22 8.72a.75.75 0 000 1.06l6.25 6.25a.75.75 0 001.06 0l6.25-6.25a.75.75 0 00-1.06-1.06L12 14.44 6.28 8.72a.75.75 0 00-1.06 0z"></path></svg></div>
+<div class="summary-up docutils">
+<svg version="1.1" width="24" height="24" class="octicon octicon-chevron-up" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M18.78 15.28a.75.75 0 000-1.06l-6.25-6.25a.75.75 0 00-1.06 0l-6.25 6.25a.75.75 0 101.06 1.06L12 9.56l5.72 5.72a.75.75 0 001.06 0z"></path></svg></div>
+</summary><div class="summary-content card-body docutils">
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">8</span>
+<span class="n">Lattice</span><span class="o">=</span><span class="s2">&quot;12.0 0.0 0.0 0.0 12.0 0.0 0.0 0.0 12.0&quot;</span> <span class="n">Properties</span><span class="o">=</span><span class="n">species</span><span class="p">:</span><span class="n">S</span><span class="p">:</span><span class="mi">1</span><span class="p">:</span><span class="n">pos</span><span class="p">:</span><span class="n">R</span><span class="p">:</span><span class="mi">3</span> <span class="n">pbc</span><span class="o">=</span><span class="s2">&quot;T T T&quot;</span>
+<span class="n">Na</span>       <span class="mf">2.00000000</span>       <span class="mf">2.50000000</span>       <span class="mf">4.2000000</span>
+<span class="n">Cl</span>       <span class="mf">6.00000000</span>       <span class="mf">7.50000000</span>       <span class="mf">9.20</span>
+<span class="n">O</span>        <span class="mf">2.00000000</span>       <span class="mf">2.00000000</span>       <span class="mf">2.11926200</span>
+<span class="n">H</span>        <span class="mf">2.00000000</span>       <span class="mf">2.76323900</span>       <span class="mf">1.52295300</span>
+<span class="n">H</span>        <span class="mf">2.00000000</span>       <span class="mf">1.23676100</span>       <span class="mf">1.52295300</span>
+<span class="n">O</span>        <span class="mf">6.00000000</span>       <span class="mf">6.00000000</span>       <span class="mf">6.11926200</span>
+<span class="n">H</span>        <span class="mf">6.00000000</span>       <span class="mf">6.76323900</span>       <span class="mf">5.52295300</span>
+<span class="n">H</span>        <span class="mf">6.00000000</span>       <span class="mf">5.23676100</span>       <span class="mf">5.52295300</span>
+</pre></div>
+</div>
+</div>
+</details></section>
+<section id="edftpy-input-file">
+<h3>eDFTpy input file<a class="headerlink" href="#edftpy-input-file" title="Permalink to this headline">¶</a></h3>
+<p>This input file follows the same structure that in the SCF Calculation with heterogeneous subsystems tutorial with some additional keywords in the Chloride subsystem section with the goal of setup the use of gaussian smearing to describe the occupations explained below:</p>
+<details class="sphinx-bs dropdown card mb-3">
+<summary class="summary-title card-header">
+input.ini<div class="summary-down docutils">
+<svg version="1.1" width="24" height="24" class="octicon octicon-chevron-down" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M5.22 8.72a.75.75 0 000 1.06l6.25 6.25a.75.75 0 001.06 0l6.25-6.25a.75.75 0 00-1.06-1.06L12 14.44 6.28 8.72a.75.75 0 00-1.06 0z"></path></svg></div>
+<div class="summary-up docutils">
+<svg version="1.1" width="24" height="24" class="octicon octicon-chevron-up" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M18.78 15.28a.75.75 0 000-1.06l-6.25-6.25a.75.75 0 00-1.06 0l-6.25 6.25a.75.75 0 101.06 1.06L12 9.56l5.72 5.72a.75.75 0 001.06 0z"></path></svg></div>
+</summary><div class="summary-content card-body docutils">
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">JOB</span><span class="p">]</span>
+<span class="n">task</span>               <span class="o">=</span> <span class="n">Optdensity</span>
+
+<span class="p">[</span><span class="n">PATH</span><span class="p">]</span>
+<span class="n">pp</span>                 <span class="o">=</span> <span class="o">./</span>
+<span class="n">cell</span>               <span class="o">=</span> <span class="o">./</span>
+
+<span class="p">[</span><span class="n">PP</span><span class="p">]</span>
+<span class="n">O</span>                  <span class="o">=</span> <span class="n">o_pbe_v1</span><span class="mf">.2</span><span class="o">.</span><span class="n">uspp</span><span class="o">.</span><span class="n">F</span><span class="o">.</span><span class="n">UPF</span>
+<span class="n">H</span>                  <span class="o">=</span> <span class="n">h_pbe_v1</span><span class="mf">.4</span><span class="o">.</span><span class="n">uspp</span><span class="o">.</span><span class="n">F</span><span class="o">.</span><span class="n">UPF</span>
+<span class="n">Na</span>                 <span class="o">=</span> <span class="n">na_pbe_v1</span><span class="mf">.5</span><span class="o">.</span><span class="n">uspp</span><span class="o">.</span><span class="n">F</span><span class="o">.</span><span class="n">UPF</span>
+<span class="n">Cl</span>                 <span class="o">=</span> <span class="n">cl_pbe_v1</span><span class="mf">.4</span><span class="o">.</span><span class="n">uspp</span><span class="o">.</span><span class="n">F</span><span class="o">.</span><span class="n">UPF</span> 
+
+<span class="p">[</span><span class="n">OPT</span><span class="p">]</span>
+<span class="n">maxiter</span>            <span class="o">=</span> <span class="mi">200</span>
+<span class="n">econv</span>              <span class="o">=</span> <span class="mf">1e-6</span>
+
+<span class="p">[</span><span class="n">MOL</span><span class="p">]</span>
+<span class="n">charge</span><span class="o">-</span><span class="n">Na</span>  <span class="o">=</span> <span class="mi">1</span>
+<span class="n">charge</span><span class="o">-</span><span class="n">H2O</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">charge</span><span class="o">-</span><span class="n">Cl</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+
+<span class="p">[</span><span class="n">GSYSTEM</span><span class="p">]</span>
+<span class="n">cell</span><span class="o">-</span><span class="n">file</span>          <span class="o">=</span> <span class="n">salt_h2o_2</span><span class="o">.</span><span class="n">xyz</span>
+<span class="n">grid</span><span class="o">-</span><span class="n">ecut</span>          <span class="o">=</span> <span class="mi">1200</span>
+<span class="n">exc</span><span class="o">-</span><span class="n">x_str</span>          <span class="o">=</span> <span class="n">gga_x_pbe</span>
+<span class="n">exc</span><span class="o">-</span><span class="n">c_str</span>          <span class="o">=</span> <span class="n">gga_c_pbe</span>
+<span class="n">kedf</span><span class="o">-</span><span class="n">kedf</span>          <span class="o">=</span> <span class="n">GGA</span>
+<span class="n">kedf</span><span class="o">-</span><span class="n">k_str</span>         <span class="o">=</span> <span class="n">revAPBEK</span>
+
+<span class="p">[</span><span class="n">SUB_NA</span><span class="p">]</span>
+<span class="n">calculator</span>         <span class="o">=</span> <span class="n">qe</span>
+<span class="n">embed</span>              <span class="o">=</span> <span class="n">KE</span> <span class="n">XC</span>
+<span class="n">cell</span><span class="o">-</span><span class="n">split</span>         <span class="o">=</span> <span class="mf">0.5</span> <span class="mf">0.5</span> <span class="mf">0.5</span>
+<span class="n">cell</span><span class="o">-</span><span class="n">index</span>         <span class="o">=</span> <span class="mi">0</span><span class="p">:</span><span class="mi">1</span>
+<span class="n">grid</span><span class="o">-</span><span class="n">ecut</span>          <span class="o">=</span> <span class="mi">2400</span>
+<span class="n">mix</span><span class="o">-</span><span class="n">coef</span>            <span class="o">=</span> <span class="mf">0.7</span>
+
+<span class="p">[</span><span class="n">SUB_CL</span><span class="p">]</span>
+<span class="n">calculator</span>         <span class="o">=</span> <span class="n">qe</span>
+<span class="n">embed</span>              <span class="o">=</span> <span class="n">KE</span> <span class="n">XC</span>
+<span class="n">cell</span><span class="o">-</span><span class="n">split</span>         <span class="o">=</span> <span class="mf">0.5</span> <span class="mf">0.5</span> <span class="mf">0.5</span>
+<span class="n">cell</span><span class="o">-</span><span class="n">index</span>         <span class="o">=</span> <span class="mi">1</span><span class="p">:</span><span class="mi">2</span>
+<span class="n">basefile</span>           <span class="o">=</span> <span class="n">qe_in_cl</span><span class="o">.</span><span class="ow">in</span>
+<span class="n">density</span><span class="o">-</span><span class="n">use_gaussians</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="n">mix</span><span class="o">-</span><span class="n">coef</span>           <span class="o">=</span> <span class="mf">0.7</span>
+
+<span class="p">[</span><span class="n">SUB_H2O</span><span class="p">]</span>
+<span class="n">calculator</span>         <span class="o">=</span> <span class="n">qe</span>
+<span class="n">embed</span>              <span class="o">=</span> <span class="n">KE</span> <span class="n">XC</span>
+<span class="n">cell</span><span class="o">-</span><span class="n">split</span>         <span class="o">=</span> <span class="mf">0.5</span> <span class="mf">0.5</span> <span class="mf">0.5</span>
+<span class="n">cell</span><span class="o">-</span><span class="n">index</span>         <span class="o">=</span> <span class="mi">2</span><span class="p">:</span>
+<span class="n">decompose</span><span class="o">-</span><span class="n">method</span>   <span class="o">=</span> <span class="n">distance</span>
+<span class="n">decompose</span><span class="o">-</span><span class="n">radius</span><span class="o">-</span><span class="n">O</span> <span class="o">=</span> <span class="mf">0.90</span>
+<span class="n">decompose</span><span class="o">-</span><span class="n">radius</span><span class="o">-</span><span class="n">H</span> <span class="o">=</span> <span class="mf">0.60</span>
+<span class="n">grid</span><span class="o">-</span><span class="n">ecut</span>          <span class="o">=</span> <span class="mi">2400</span>
+<span class="n">mix</span><span class="o">-</span><span class="n">coef</span>            <span class="o">=</span> <span class="mf">0.7</span>
+</pre></div>
+</div>
+</div>
+</details><ul class="simple">
+<li><p><a class="reference internal" href="../../config.html#sub-prefix"><span class="std std-ref">[SUB_CL]</span></a></p></li>
+</ul>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">basefile</span>           <span class="o">=</span> <span class="n">qe_in_cl</span><span class="o">.</span><span class="ow">in</span>           <span class="c1"># File that contains additional QE keywords for Chloride subsystem</span>
+<span class="n">density</span><span class="o">-</span><span class="n">use_gaussians</span> <span class="o">=</span> <span class="kc">True</span>               <span class="c1"># Using gaussian smearing</span>
+</pre></div>
+</div>
+</section>
+<section id="aditional-subsystem-configuration">
+<h3>Aditional subsystem configuration<a class="headerlink" href="#aditional-subsystem-configuration" title="Permalink to this headline">¶</a></h3>
+<p>We defined a base file for the Chloride subsystem in the eDFTpy input file, we should also provide this input file with a Quantum Espresso input format. The goal of this input file is to provide an additional calculation setup for the  determined subsystem such as LDA+U (see the additional <a class="reference external" href="http://qepy.rutgers.edu/">QEpy</a> configuration to enable this type of calculation), which means you  can use one base file for each subsystem if you require and specify it in your eDFTpy input file.</p>
+<details class="sphinx-bs dropdown card mb-3">
+<summary class="summary-title card-header">
+qe_in_cl.in<div class="summary-down docutils">
+<svg version="1.1" width="24" height="24" class="octicon octicon-chevron-down" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M5.22 8.72a.75.75 0 000 1.06l6.25 6.25a.75.75 0 001.06 0l6.25-6.25a.75.75 0 00-1.06-1.06L12 14.44 6.28 8.72a.75.75 0 00-1.06 0z"></path></svg></div>
+<div class="summary-up docutils">
+<svg version="1.1" width="24" height="24" class="octicon octicon-chevron-up" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M18.78 15.28a.75.75 0 000-1.06l-6.25-6.25a.75.75 0 00-1.06 0l-6.25 6.25a.75.75 0 101.06 1.06L12 9.56l5.72 5.72a.75.75 0 001.06 0z"></path></svg></div>
+</summary><div class="summary-content card-body docutils">
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&amp;</span><span class="n">SYSTEM</span>
+   <span class="n">ecutwfc</span>          <span class="o">=</span> <span class="mi">40</span>
+   <span class="n">ecutrho</span>          <span class="o">=</span> <span class="mi">400</span>
+   <span class="n">nosym</span>            <span class="o">=</span> <span class="o">.</span><span class="n">true</span><span class="o">.</span>
+   <span class="n">occupations</span>      <span class="o">=</span> <span class="s1">&#39;smearing&#39;</span>
+   <span class="n">degauss</span>          <span class="o">=</span> <span class="mf">0.001</span>
+   <span class="n">smearing</span>         <span class="o">=</span> <span class="s1">&#39;gaussian&#39;</span>
+<span class="o">/</span>
+<span class="o">&amp;</span><span class="n">ELECTRONS</span>
+<span class="o">/</span>
+</pre></div>
+</div>
+</div>
+</details></section>
+<section id="ase-input-file">
+<h3>ASE input file<a class="headerlink" href="#ase-input-file" title="Permalink to this headline">¶</a></h3>
+<p>The goal of this input file is to configure the relaxation of a strcuture driven by <a class="reference external" href="https://gitlab.com/ase/ase">ASE</a> software, merging the subsystem configuration provide by the eDFTpy driver calculation. This input file follows the <a class="reference external" href="https://gitlab.com/ase/ase">ASE</a> input format for a relaxation calculation.</p>
+<details class="sphinx-bs dropdown card mb-3">
+<summary class="summary-title card-header">
+ase_relax.py<div class="summary-down docutils">
+<svg version="1.1" width="24" height="24" class="octicon octicon-chevron-down" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M5.22 8.72a.75.75 0 000 1.06l6.25 6.25a.75.75 0 001.06 0l6.25-6.25a.75.75 0 00-1.06-1.06L12 14.44 6.28 8.72a.75.75 0 00-1.06 0z"></path></svg></div>
+<div class="summary-up docutils">
+<svg version="1.1" width="24" height="24" class="octicon octicon-chevron-up" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M18.78 15.28a.75.75 0 000-1.06l-6.25-6.25a.75.75 0 00-1.06 0l-6.25 6.25a.75.75 0 101.06 1.06L12 9.56l5.72 5.72a.75.75 0 001.06 0z"></path></svg></div>
+</summary><div class="summary-content card-body docutils">
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/usr/bin/env python3</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">edftpy.api.api4ase</span> <span class="kn">import</span> <span class="n">eDFTpyCalculator</span>
+<span class="kn">from</span> <span class="nn">edftpy.config</span> <span class="kn">import</span> <span class="n">read_conf</span>
+<span class="kn">from</span> <span class="nn">edftpy.interface</span> <span class="kn">import</span> <span class="n">conf2init</span>
+<span class="kn">from</span> <span class="nn">edftpy.mpi</span> <span class="kn">import</span> <span class="n">graphtopo</span><span class="p">,</span> <span class="n">sprint</span><span class="p">,</span> <span class="n">pmi</span>
+<span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">8888</span><span class="p">)</span>
+<span class="c1">############################## initial ##############################</span>
+<span class="n">conf</span> <span class="o">=</span> <span class="n">read_conf</span><span class="p">(</span><span class="s1">&#39;./input.ini&#39;</span><span class="p">)</span>
+<span class="n">conf2init</span><span class="p">(</span><span class="n">conf</span><span class="p">,</span> <span class="n">pmi</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+<span class="n">cell_file</span> <span class="o">=</span> <span class="n">conf</span><span class="p">[</span><span class="s2">&quot;PATH&quot;</span><span class="p">][</span><span class="s2">&quot;cell&quot;</span><span class="p">]</span> <span class="o">+</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="o">+</span> <span class="n">conf</span><span class="p">[</span><span class="s1">&#39;GSYSTEM&#39;</span><span class="p">][</span><span class="s2">&quot;cell&quot;</span><span class="p">][</span><span class="s2">&quot;file&quot;</span><span class="p">]</span>
+<span class="c1">#-----------------------------------------------------------------------</span>
+
+<span class="kn">import</span> <span class="nn">ase.io</span>
+<span class="kn">from</span> <span class="nn">ase.io.trajectory</span> <span class="kn">import</span> <span class="n">Trajectory</span>
+<span class="kn">from</span> <span class="nn">ase</span> <span class="kn">import</span> <span class="n">units</span>
+<span class="kn">from</span> <span class="nn">ase.md.verlet</span> <span class="kn">import</span> <span class="n">VelocityVerlet</span>
+<span class="kn">from</span> <span class="nn">ase.constraints</span> <span class="kn">import</span> <span class="n">FixAtoms</span>
+<span class="kn">from</span> <span class="nn">ase.md.andersen</span> <span class="kn">import</span> <span class="n">Andersen</span>
+<span class="kn">from</span> <span class="nn">ase.md.velocitydistribution</span> <span class="kn">import</span> <span class="n">MaxwellBoltzmannDistribution</span>
+<span class="kn">from</span> <span class="nn">ase.constraints</span> <span class="kn">import</span> <span class="n">FixBondLength</span>
+<span class="kn">from</span> <span class="nn">ase.optimize</span> <span class="kn">import</span> <span class="n">BFGS</span><span class="p">,</span> <span class="n">LBFGS</span><span class="p">,</span> <span class="n">FIRE</span>
+<span class="kn">from</span> <span class="nn">ase.optimize.sciopt</span> <span class="kn">import</span> <span class="n">SciPyFminBFGS</span><span class="p">,</span> <span class="n">SciPyFminCG</span>
+
+<span class="n">atoms</span> <span class="o">=</span> <span class="n">ase</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">cell_file</span><span class="p">)</span>
+
+<span class="n">calc</span> <span class="o">=</span> <span class="n">eDFTpyCalculator</span><span class="p">(</span><span class="n">config</span> <span class="o">=</span> <span class="n">conf</span><span class="p">,</span> <span class="n">graphtopo</span> <span class="o">=</span> <span class="n">graphtopo</span><span class="p">)</span>
+<span class="n">atoms</span><span class="o">.</span><span class="n">set_calculator</span><span class="p">(</span><span class="n">calc</span><span class="p">)</span>
+
+<span class="n">trajfile</span> <span class="o">=</span> <span class="s1">&#39;opt.traj&#39;</span>
+<span class="n">af</span> <span class="o">=</span> <span class="n">atoms</span>
+<span class="n">opt</span> <span class="o">=</span> <span class="n">LBFGS</span><span class="p">(</span><span class="n">af</span><span class="p">,</span> <span class="n">trajectory</span> <span class="o">=</span> <span class="n">trajfile</span><span class="p">,</span> <span class="n">memory</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span> <span class="n">use_line_search</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span>
+<span class="c1"># opt = SciPyFminCG(af, trajectory = trajfile)</span>
+
+<span class="n">opt</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">fmax</span> <span class="o">=</span> <span class="mf">0.3</span><span class="p">)</span>
+
+<span class="n">traj</span> <span class="o">=</span> <span class="n">Trajectory</span><span class="p">(</span><span class="n">trajfile</span><span class="p">)</span>
+<span class="n">ase</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;opt.xyz&#39;</span><span class="p">,</span> <span class="n">traj</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+</details><p>To setup your own calculation you should take into account and reconfigure the next keywords sections:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">conf</span> <span class="o">=</span> <span class="n">read_conf</span><span class="p">(</span><span class="s1">&#39;./input.ini&#39;</span><span class="p">)</span>                                                 <span class="c1"># Change if your eDFTpy input file has a different name</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">opt</span> <span class="o">=</span> <span class="n">LBFGS</span><span class="p">(</span><span class="n">af</span><span class="p">,</span> <span class="n">trajectory</span> <span class="o">=</span> <span class="n">trajfile</span><span class="p">,</span> <span class="n">memory</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span> <span class="n">use_line_search</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span>    <span class="c1"># In this tutorial we use the limited memory version of the BFGS algorithm, check ASE wwebsite to use a different algorithm</span>
+</pre></div>
+</div>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">opt</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">fmax</span> <span class="o">=</span> <span class="mf">0.3</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>In this tutorial we use the limited memory version of the BFGS algorithm, check <a class="reference external" href="https://gitlab.com/ase/ase">ASE</a> website to use a different algorithm. On the other hand. we use a big value for <cite>fmax</cite>, you should change for a real calculation setup.</p>
+</div>
+</section>
+</section>
+<section id="running-edftpy">
+<h2>Running eDFTpy<a class="headerlink" href="#running-edftpy" title="Permalink to this headline">¶</a></h2>
+<p>Once you finish setting out the calculation, you can run the calculation using:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ mpirun -n 4 python -m ase_relax.py &gt; log
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Here the log file storages the summary of the calculation.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>If you are using python3 version you should change all the python command lines wrote here from python to python3</p>
+</div>
+</section>
+<section id="output-files">
+<h2>Output files<a class="headerlink" href="#output-files" title="Permalink to this headline">¶</a></h2>
+<p>Once your calculation finishes you will have the same set of output files from eDFTpy calculations with additional files as a product of the relaxation of the global system.</p>
+<section id="additional-output-files">
+<h3>Additional output Files<a class="headerlink" href="#additional-output-files" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+<div><ul class="simple">
+<li><p><cite>edftpy_gsystem.xyz</cite> Global system coordinates for the last step of the simulation</p></li>
+<li><p><cite>opt.xyz</cite>  Coordinates for the global system optimized structure</p></li>
+<li><p><cite>opt.traj</cite> Trajectory file for the relaxation proccess</p></li>
+</ul>
+</div></blockquote>
+</section>
+</section>
+<section id="preliminary-analysis">
+<h2>Preliminary Analysis<a class="headerlink" href="#preliminary-analysis" title="Permalink to this headline">¶</a></h2>
+<p>Once you finished your simulation you would like to analyze your results, most of the time your structural analysis will require your trajectory file (opt.traj). Although this trajectory formatis only useful if you are using the ASE package to perform visual analysis.</p>
+<p>Open the trajectory file with the ASE visualization tool by typing:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ ase gui opt.traj
+</pre></div>
+</div>
+<p>Once you open the relaxation trajectory file using the visualization tool included in ASE package you will observe the step by step structure change and a graphic generator which includes a set of graphics check ASE’s <a class="reference external" href="https://wiki.fysik.dtu.dk/ase/ase/gui/gui.html">GUI</a>. Here we show the variation of the total energy (eV) in function of the number steps for two different relaxations of the  binary salt (NaCl) molecule surrounded by a water dimer, using the <cite>fmax = 0.3</cite> value provided in this tutorial (left) and a <cite>fmax = 0.05</cite> (Right).</p>
+<table class="docutils align-center" id="id1">
+<caption><span class="caption-text">Total energy Variation</span><a class="headerlink" href="#id1" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="../../../_images/energy.png"><img alt="logo1" src="../../../_images/energy.png" style="width: 505.6px; height: 290.40000000000003px;" /></a></p></td>
+<td><p><a class="reference internal" href="../../../_images/energy-0.05.png"><img alt="logo2" src="../../../_images/energy-0.05.png" style="width: 474.0px; height: 300.0px;" /></a></p></td>
+</tr>
+</tbody>
+</table>
+<section id="convert-the-format-of-a-trajectory-file">
+<h3>Convert the format of a trajectory file<a class="headerlink" href="#convert-the-format-of-a-trajectory-file" title="Permalink to this headline">¶</a></h3>
+<p>If you would like to use any other package to carry out structural analysis will be useful for you to covert this trajectory file to a most common type as xyz. We developed a python script that you can use to convert your trajectory files by typing:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python -m edftpy –-convert –-traj opt.traj -o opt-traj.xyz
+</pre></div>
+</div>
+<p>You can check the command line <a class="reference internal" href="../../../cmdline.html#cui"><span class="std std-ref">miscellaneous</span></a> for eDFTpy in the command line section of the sofware website.</p>
+</section>
+</section>
+<section id="restarting-a-relaxation-of-a-structure">
+<h2>Restarting a Relaxation of a structure<a class="headerlink" href="#restarting-a-relaxation-of-a-structure" title="Permalink to this headline">¶</a></h2>
+<p>Restarting a calculation could be a powerful option taking into account the time-consuming disadvantage of an ab-initio molecular dynamics simulation. Here we give the user a guide on how can restart a relaxation that for a pecific reason did not finish or should be elongated.</p>
+<p>To restart a relaxation calculation the user should modify the eDFTpy and ASE input files either Structure optimizartion or MD production, we suggest the next six-step workflow to have succes restarting a calculation.</p>
+<ol class="arabic">
+<li><p>Copy your trajectory file (opt.traj) to a new file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cp opt.traj  opt-1.traj
+</pre></div>
+</div>
+</li>
+<li><p>Create a new global system coordinate file using the last geometry coordinates:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cp edftpy_gsystem.xyz rst-1.xyz
+</pre></div>
+</div>
+</li>
+<li><p>Change the file name of the cell-file in the eDFTpy input file</p>
+<ul class="simple">
+<li><p>from</p></li>
+</ul>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cell</span><span class="o">-</span><span class="n">file</span>          <span class="o">=</span> <span class="n">h2o_2</span><span class="o">.</span><span class="n">xyz</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>to</p></li>
+</ul>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cell</span><span class="o">-</span><span class="n">file</span>          <span class="o">=</span> <span class="n">rst</span><span class="o">-</span><span class="mf">1.</span><span class="n">xyz</span>
+</pre></div>
+</div>
+</li>
+<li><p>Change the cell file in the ASE input file to your old trajectory file</p>
+<ul class="simple">
+<li><p>from</p></li>
+</ul>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">atoms</span> <span class="o">=</span> <span class="n">ase</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">cell_file</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>to</p></li>
+</ul>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">atoms</span> <span class="o">=</span> <span class="n">ase</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="s2">&quot;opt-1.traj&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p>Restart your simulation using:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ mpirun -n 4 python -m ase_relax.py &gt; log
+</pre></div>
+</div>
+</li>
+<li><p>Once you fininsh your structure optimization after one of many restartings you could concatenate the trajectory files using:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python -m edftpy --convert --traj opt-1.traj opt-2.traj -o opt-tot.traj
+</pre></div>
+</div>
+</li>
+</ol>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../optimize-2/optimize-2.html" class="btn btn-neutral float-left" title="Optimization of Density with Heterogeneous susbsystems" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../md/md.html" class="btn btn-neutral float-right" title="Molecular Dynamics Simulation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Pavanello Research Group.
+      <span class="lastupdated">Last updated on Thursday, 24 Jul 2025 15:13:26.
+      </span></p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+  
+<button onclick="topFunction()" id="btn" title="Go to top">Top</button>
+
+<script>
+var mybutton = document.getElementById("btn");
+
+window.onscroll = function() {scrollFunction()};
+
+function scrollFunction() {
+  if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+    mybutton.style.display = "block";
+  } else {
+    mybutton.style.display = "none";
+  }
+}
+
+function topFunction() {
+  document.body.scrollTop = 0;
+  document.documentElement.scrollTop = 0;
+}
+</script>
+
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

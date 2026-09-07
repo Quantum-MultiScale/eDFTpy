@@ -20,7 +20,7 @@ from edftpy.mpi import GraphTopo, MP, sprint
 from edftpy.utils.math import get_hash, get_formal_charge, grid_map_data
 from edftpy.subsystem.decompose import decompose_sub
 from edftpy.engine.driver import DriverKS, DriverEX, DriverMM, DriverOF
-from edftpy.utils.common import Grid, Ions
+from edftpy.utils.common import Grid, Ions, Field
 from edftpy.utils import timer
 
 
@@ -226,6 +226,13 @@ def config2optimizer(config, ions = None, optimizer = None, graphtopo = None, ps
     if mix_kwargs['predecut'] : mix_kwargs['predecut'] *= ENERGY_CONV["eV"]["Hartree"]
     mixer = Mixer(**mix_kwargs)
     opt = Optimization(drivers = drivers, options = optimization_options, gsystem = gsystem, mixer = mixer)
+    # Impurity model (charged fragments): tells Optimization.set_global_potential_sdft to
+    # also track a live, per-SCF-iteration Hartree-only global potential (needed by
+    # EmbedEvaluator's neutral_screen_potential combination). config is read identically
+    # by every rank, so this flag is MPI-safe to use for unconditional (non-per-rank)
+    # branching, unlike per-rank driver assignment.
+    opt.has_impurity_model = any(
+        config[key].get('mt_neutral_potential', None) for key in config if key.startswith('SUB'))
     #-----------------------------------------------------------------------
     if task == 'Optmix' :
         optmix = True
@@ -337,9 +344,9 @@ def config2ions(config, ions = None, keysys = 'GSYSTEM', **kwargs):
             ions = io.ase_read(filename,
                     format=config[keysys]["cell"]["format"])
     else :
-        lattice = config[keysys]['cell']['lattice']
+        lattice = config[keysys]['cell']['lattice'] * LEN_CONV["Angstrom"]["Bohr"]
         symbols = config[keysys]['cell']['symbols']
-        positions = config[keysys]['cell']['positions']
+        positions = config[keysys]['cell']['positions'] * LEN_CONV["Angstrom"]["Bohr"]
         scaled_positions = config[keysys]['cell']['scaled_positions']
         numbers = config[keysys]['cell']['numbers']
         if len(lattice) == 9 :
@@ -349,7 +356,7 @@ def config2ions(config, ions = None, keysys = 'GSYSTEM', **kwargs):
         if scaled_positions is not None :
             scaled_positions = np.asarray(scaled_positions).reshape((-1, 3))
         ions = Ions(symbols = symbols, positions = positions, cell = lattice,
-                numbers = numbers, scaled_positions = scaled_positions, units = 'ase')
+                numbers = numbers, scaled_positions = scaled_positions)
     return ions
 
 def ions2config(config, ions, keysys = 'GSYSTEM', **kwargs):
@@ -359,7 +366,7 @@ def ions2config(config, ions, keysys = 'GSYSTEM', **kwargs):
     config[keysys]['cell']['positions'] = (ions.positions.ravel()*LEN_CONV["Bohr"]["Angstrom"]).tolist()
     return config
 
-def config2total_embed(config, driver = None, optimizer = None, **kwargs):
+def config2total_embed(config, driver = None, optimizer = None, mt = False, **kwargs):
     """
     Only support KS subsystems
     """
@@ -369,15 +376,41 @@ def config2total_embed(config, driver = None, optimizer = None, **kwargs):
     else :
         if driver.technique != 'KS' :
             raise AttributeError("Sorry config2total_embed only support KS subsystem yet.")
+        # Check if has cell-cut
+        has_cell_cut = False
+        if "cell" in config[driver.key] and "split" in config[driver.key]["cell"]:
+            cellsplit = config[driver.key]["cell"]["split"]
+            if cellsplit is not None and any(x > 0 for x in cellsplit):
+                has_cell_cut = True
+        if not mt :
+            subkeys = [key for key in config if key.startswith('SUB')]
+            for keysys in subkeys:
+                if  config[keysys].get("mt", None):
+                    mt = True
+                    break
         if driver.comm.rank == 0 :
             grid = Grid(lattice=grid_global.lattice, nr=grid_global.nrR, full=grid_global.full, direct = True)
             pseudo = optimizer.gsystem.total_evaluator.funcdicts['PSEUDO'].restart(duplicate=True)
-            total_embed = config2total_evaluator(config, driver.subcell.ions, grid, pseudo = pseudo)
-            # add core density to XC
-            if 'XC' in total_embed.funcdicts :
-                if driver.core_density is not None :
-                    core_density = grid_map_data(driver.core_density, grid = grid)
-                    total_embed.funcdicts['XC'].core_density = core_density
+            ions = driver.subcell.ions
+            if has_cell_cut:
+                total_embed = driver.embed_evaluator
+                # add core density to XC
+                if 'XC' in total_embed.funcdicts :
+                    if driver.core_density is not None :
+                        total_embed.funcdicts['XC'].core_density = driver.core_density
+            elif mt and not has_cell_cut:
+                total_embed = config2total_evaluator(config, ions, grid, mt= mt)
+                # add core density to XC
+                if 'XC' in total_embed.funcdicts :
+                    if driver.core_density is not None :
+                        total_embed.funcdicts['XC'].core_density = driver.core_density
+            else:
+                total_embed = config2total_evaluator(config, ions, grid, pseudo = pseudo)
+                # add core density to XC                                                             
+                if 'XC' in total_embed.funcdicts :
+                    if driver.core_density is not None :
+                        core_density = grid_map_data(driver.core_density, grid = grid)
+                        total_embed.funcdicts['XC'].core_density = core_density
             density = grid_map_data(driver.density, grid = grid)
             driver.density_global = density
         else :
@@ -448,15 +481,38 @@ def config2graphtopo(config, graphtopo = None, scale = None):
     sprint('Number of processors for each subsystem : \n ', f_str, comm = graphtopo.comm)
     return graphtopo
 
-def config2total_evaluator(config, ions, grid, pplist = None, total_evaluator= None, cell_change = None, pseudo = None):
+def _get_mt_screening(grid, mt):
+    """
+    Build a Martyna-Tuckerman isolated-boundary Coulomb screening object for `grid`,
+    shared between the Hartree and (local) Pseudo functionals so they use one cached
+    W(G). Returns None if `mt` is falsy, in which case passing `mt=None` into Hartree/
+    LocalPP is equivalent to omitting `mt` (ordinary periodic electrostatics).
+    """
+    if not mt :
+        return None
+    from dftpy.functional.martyna_tuckerman import MartynaTuckerman
+    Lb = float(grid.lattice[0][0]) #already in Bohr
+    sprint('Using MT screening (alpha = sqrt(7/Lb)) on grid with Lb = ', Lb)
+    return MartynaTuckerman(grid, alpha=np.sqrt(7/Lb))
+
+def config2total_evaluator(config, ions, grid, pplist = None, total_evaluator= None, mt = False, cell_change = None, pseudo = None):
     keysys = "GSYSTEM"
     pme = config["MATH"]["linearie"]
     linearii = config["MATH"]["linearii"]
     xc_kwargs = config[keysys]["exc"].copy()
     ke_kwargs = config[keysys]["kedf"].copy()
     environ_kwargs = config[keysys].get('environ', {})
+    if pplist is None:
+        labels = set(ions.symbols)
+        pplist = {}
+        for key in config["PP"]:
+            ele = key.capitalize()
+            if ele in labels :
+                pplist[ele] = config["PATH"]["pp"] +os.sep+ config["PP"][key]
     #---------------------------Functional----------------------------------
-    if pseudo is not None :
+    M_T = _get_mt_screening(grid, mt)
+
+    if pseudo is not None:
         pseudo.restart(grid=grid, ions=ions, full=False)
 
     if cell_change == 'position' and total_evaluator is not None:
@@ -466,8 +522,17 @@ def config2total_evaluator(config, ions, grid, pplist = None, total_evaluator= N
         total_evaluator.funcdicts['PSEUDO'] = pseudo
     else :
         if pseudo is None :
-            pseudo = LocalPP(grid = grid, ions=ions, PP_list=pplist, PME=pme)
-        hartree = Hartree()
+            if mt :
+                sprint('Using MT parse_config Pseudo : ', mt)
+                pseudo = LocalPP(grid = grid, ions=ions, PP_list=pplist, PME=pme, mt = M_T)
+            else :
+                pseudo = LocalPP(grid = grid, ions=ions, PP_list=pplist, PME=pme)
+        if mt :
+            sprint('Using MT parse_config Hartree: ', mt)
+            hartree = Hartree(mt = M_T)
+        else :
+            hartree = Hartree()
+
         xc = XC(pseudo = pseudo, **xc_kwargs)
         funcdicts = {'XC' :xc, 'HARTREE' :hartree, 'PSEUDO' :pseudo}
         if ke_kwargs['kedf'] is None or ke_kwargs['kedf'].lower().startswith('no'):
@@ -497,9 +562,7 @@ def config2embed_evaluator(config, keysys, ions, grid, pplist = None, cell_chang
     pme = config["MATH"]["linearie"]
 
     ke_kwargs = config[keysys]["kedf"].copy()
-    #embed = config[keysys]["embed"].upper()
-    embed = [element.upper() for element in config[keysys]["embed"]]
-
+    embed = config[keysys]["embed"]
     exttype = config[keysys]["exttype"]
 
     opt_options = config[keysys]["opt"].copy()
@@ -512,6 +575,32 @@ def config2embed_evaluator(config, keysys, ions, grid, pplist = None, cell_chang
         if not exttype & 2 : embed.append('HARTREE')
         if not exttype & 4 : embed.append('XC')
 
+    #---------------------------MT screening (self-consistent)---------------
+    # Own-subsystem Hartree/Pseudo get an isolated-boundary (MT) correction when
+    # requested, so the embedding potential (global_potential - own_potential) is
+    # self-consistent every SCF iteration instead of only in the post-hoc embedpot
+    # output (see config2total_embed/optimize_embed). Not supported together with
+    # cell-cut, since a cut subsystem's grid is a genuinely smaller box than
+    # GSYSTEM's, a different problem MT here doesn't address.
+    mt = config[keysys].get("mt", False)
+    if mt :
+        has_cell_cut = False
+        cellsplit = config[keysys].get("cell", {}).get("split")
+        if cellsplit is not None and any(x > 0 for x in cellsplit):
+            has_cell_cut = True
+        if has_cell_cut :
+            sprint('Warning: MT embedding is not supported with cell-cut, disabling MT for ', keysys)
+            mt = False
+
+    # Impurity model (charged fragments): a static neutral-reference screening
+    # potential, imported once from a separate calculation without the impurity,
+    # is combined with the live embedding potential every SCF iteration in
+    # EmbedEvaluator.get_embed_potential. Own-subsystem Hartree/Pseudo stay MT
+    # whenever mt=True, impurity model or not - own_potential is always MT here.
+    neutral_potential_file = config[keysys].get("mt_neutral_potential", None) if mt else None
+
+    M_T = _get_mt_screening(grid, mt) if ('HARTREE' in embed or 'PSEUDO' in embed) else None
+
     emb_funcdicts = {}
     if 'KE' in embed :
         if emb_ke_kwargs['kedf'] is None or emb_ke_kwargs['kedf'].lower().startswith('no'):
@@ -521,20 +610,41 @@ def config2embed_evaluator(config, keysys, ions, grid, pplist = None, cell_chang
             emb_funcdicts['KE'] = ke_emb
     exttype = 7
     if 'PSEUDO' in embed :
-        pseudo = LocalPP(grid = grid, ions=ions,PP_list=pplist,PME=pme, readpp=readpp)
+        if mt :
+            sprint('Using MT parse_config Pseudo (embed) : ', mt)
+            pseudo = LocalPP(grid = grid, ions=ions,PP_list=pplist,PME=pme, readpp=readpp, mt = M_T)
+        else :
+            pseudo = LocalPP(grid = grid, ions=ions,PP_list=pplist,PME=pme, readpp=readpp)
         emb_funcdicts['PSEUDO'] = pseudo
         exttype -= 1
     else:
         pseudo = None
     if 'XC' in embed :
         if 'PSEUDO' not in embed:
-            pseudo = LocalPP(grid = grid, ions=ions,PP_list=pplist,PME=pme, readpp=readpp)
+            if mt :
+                pseudo = LocalPP(grid = grid, ions=ions,PP_list=pplist,PME=pme, readpp=readpp, mt = M_T)
+            else :
+                pseudo = LocalPP(grid = grid, ions=ions,PP_list=pplist,PME=pme, readpp=readpp)
         xc_emb = XC(pseudo=pseudo, **emb_xc_kwargs)
         emb_funcdicts['XC'] = xc_emb
         exttype -= 4
     if 'HARTREE' in embed :
-        hartree = Hartree()
-        emb_funcdicts['HARTREE'] = hartree
+        if neutral_potential_file :
+            # Impurity model: Hartree is excluded entirely from the KE+XC+PSEUDO
+            # own_potential here (there is no "own" Hartree term for a charged fragment in
+            # this scheme). Instead EmbedEvaluator replaces the live Hartree slice of
+            # global_potential (global_hartree_potential, refreshed every SCF iteration by
+            # Optimization._set_global_hartree_potential) with the SAME kind of quantity
+            # computed once from a separate neutral calculation (neutral_screen_potential),
+            # applied live, every iteration, self-consistently.
+            sprint('Using Impurity Model: neutral-reference Hartree screening replaces the live one')
+        else :
+            if mt :
+                sprint('Using MT parse_config Hartree (embed): ', mt)
+                hartree = Hartree(mt = M_T)
+            else :
+                hartree = Hartree()
+            emb_funcdicts['HARTREE'] = hartree
         exttype -= 2
 
     if calculator == 'dftpy' and opt_options['opt_method'] == 'full' :
@@ -546,6 +656,12 @@ def config2embed_evaluator(config, keysys, ions, grid, pplist = None, cell_chang
         ke_evaluator = None
 
     embed_evaluator = EmbedEvaluator(ke_evaluator = ke_evaluator, **emb_funcdicts)
+
+    if neutral_potential_file :
+        sprint('Reading MT neutral (impurity model) potential from file: ', neutral_potential_file)
+        neutral_data = io.read(neutral_potential_file, kind = 'data', data_type = 'potential', grid = grid)
+        embed_evaluator.neutral_screen_potential = Field(grid, data = neutral_data)
+
     return embed_evaluator, exttype
 
 def config2evaluator_of(config, keysys, ions=None, grid=None, pplist = None, gsystem = None, cell_change = None):
@@ -553,8 +669,7 @@ def config2evaluator_of(config, keysys, ions=None, grid=None, pplist = None, gsy
     xc_kwargs = config[keysys]["exc"].copy()
     pme = config["MATH"]["linearie"]
 
-    #embed = config[keysys]["embed"]
-    embed = [element.upper() for element in config[keysys]["embed"]]
+    embed = config[keysys]["embed"]
     exttype = config[keysys]["exttype"]
 
     opt_options = config[keysys]["opt"].copy()
@@ -706,6 +821,8 @@ def config2driver(config, keysys, ions, grid, pplist = None, total_evaluator = N
             driver = get_environ_driver(pplist, gsystem_ecut = gsystem_ecut, ecut = ecut, kpoints = kpoints, margs = margs)
         else :
             raise AttributeError(f"Not supported engine : {calculator}")
+    
+    driver.embed_evaluator = embed_evaluator
     return driver
 
 def get_dftpy_driver(config, keysys, ions, grid, pplist = None, optimizer = None, cell_change = None, margs = {}):

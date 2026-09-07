@@ -311,6 +311,7 @@ class DriverKS(Driver):
         self.prev_charge[:] = self.charge
 
         self.engine.set_extpot(extpot)
+        self.extpot_saved = extpot
 
     @print2file()
     def get_density(self, sdft = 'sdft', occupations = None, sum_band = False, **kwargs):
@@ -330,6 +331,9 @@ class DriverKS(Driver):
             sprint(fstr, comm = self.comm)
             sprint('occupations :\n', occupations, comm = self.comm, level = 1)
             sprint('band_energies :\n', self.band_energies, comm = self.comm, level = 1)
+#            from edftpy.io import write
+            # potential = self._format_field_invert(self.extpot_saved, self.grid_driver)
+            # potential.write(self.prefix+'_embed_potential.xsf', ions = self.subcell.ions)
             # from edftpy.io import write
             # write(self.prefix+'.xsf', self.density, ions = self.subcell.ions)
         return self.density

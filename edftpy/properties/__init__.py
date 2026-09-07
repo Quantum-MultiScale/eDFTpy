@@ -35,11 +35,42 @@ def get_charge_vector(density, ions):
 def get_total_energies(gsystem = None, drivers = None, density = None, total_energy= None, update = True,
         olevel = 0, others = [], **kwargs):
     elist = []
+
+    after_scf = False
     if density is None :
+        # print("Density is None")
         density = gsystem.density.copy()
+        after_scf = True
+
     if total_energy is None :
         total_energy = gsystem.total_evaluator(density, calcType = ['E'], olevel = olevel).energy
-    elist.append(total_energy)
+        # print("Total energy = ", total_energy,  olevel)
+
+    if after_scf:
+        elist = []
+        #-----------------------------------------------------------------------
+        # The tHARTREE AND PSEUDO ARE already a global quantity and is replicated on all
+        # MPI ranks. Since we perform a final mp.vsum(), only let the global root
+        # contribute this value.
+        #-----------------------------------------------------------------------
+        edict = gsystem.total_evaluator(density, calcType = ['E'], split = True, olevel = olevel)
+        if gsystem.grid.mp.rank == 0:
+            edict['HARTREE'].energy = edict['HARTREE'].energy
+            edict['PSEUDO'].energy = edict['PSEUDO'].energy
+        else:
+            edict['HARTREE'].energy = 0.0
+            edict['PSEUDO'].energy = 0.0
+
+        total_energy = edict['EWALD'].energy + edict['XC'].energy + edict['KE'].energy 
+        if gsystem.grid.mp.rank == 0:
+            total_energy += edict['HARTREE'].energy + edict['PSEUDO'].energy
+
+        elist.append(total_energy)
+        # print(gsystem.grid.mp.rank, "Total energy After SCF get = ", total_energy)
+
+    else:
+        elist.append(total_energy)
+
 
     if isinstance(update, bool):
         update = [update,]*len(drivers)
@@ -55,8 +86,14 @@ def get_total_energies(gsystem = None, drivers = None, density = None, total_ene
             ene = driver.energy
         elist.append(ene)
     if len(others) > 0 :
+        # print("Others:", others, "Olevel: ", olevel)
         for item in others :
             elist.append(item)
     elist = np.asarray(elist)
     elist = gsystem.grid.mp.vsum(elist)
+
+    # if gsystem.grid.mp.rank == 0:
+    #     print("Reduced elist Final=", elist)
+    #     print("sum(elist) =", np.sum(elist))
+
     return elist
