@@ -51,6 +51,10 @@ class Optimization(object):
         self.density_prev = None
         self.converged = False
         self.observers = []
+        # Impurity model (charged fragments): set by config2optimizer from the config
+        # (identical on every rank) when any SUB uses mt_neutral_potential. Enables the
+        # extra, live Hartree-only global potential tracked in set_global_potential_sdft.
+        self.has_impurity_model = False
         #-----------------------------------------------------------------------
         if self.sdft == 'scdft' :
             if self.mixer is None :
@@ -569,7 +573,43 @@ class Optimization(object):
                         factor = np.maximum((global_density - driver.density)/global_density ** 2, 0.0)
                         factor = np.minimum(factor, 1E6)
                         global_potential += factor * energydensity
+        if self.has_impurity_model :
+            self._set_global_hartree_potential()
         return
+
+    def _set_global_hartree_potential(self):
+        """
+        Impurity model (charged fragments). Tracks a live, per-SCF-iteration Hartree-ONLY
+        slice of the periodic global potential, refreshed every iteration in parallel with
+        global_potential above, so EmbedEvaluator can directly replace it with the static
+        neutral-reference screening (neutral_screen_potential) - see
+        EmbedEvaluator.get_embed_potential for the exact substitution.
+
+        gsystem.total_evaluator's 'HARTREE' functional is always a plain, periodic
+        Hartree() (config2total_evaluator only ever gives GSYSTEM's own Hartree an mt
+        screening if GSYSTEM itself were built with mt=True, which config2optimizer never
+        does - GSYSTEM is always periodic), and self.density is exactly the density
+        get_embed_potential above builds global_potential from (both branches, mixer or
+        not). So calling that same functional object directly on self.density reproduces
+        exactly the Hartree component already summed into global_potential, with no need
+        to strip/restore the other funcdicts (unlike the one-shot post-hoc equivalent in
+        interface.py, which does need that dance because it reuses the combined
+        total_evaluator.embed_potential rather than calling funcdicts['HARTREE'] directly).
+        """
+        hartree_func = self.gsystem.total_evaluator.funcdicts.get('HARTREE', None)
+        if hartree_func is None : return
+        hartree_potential_full = hartree_func(self.density, calcType = ['V']).potential
+        for isub in range(self.nsub):
+            driver = self.drivers[isub]
+            if driver is None :
+                global_hartree = None
+            elif driver.technique == 'OF' :
+                continue
+            else :
+                if driver.evaluator.global_hartree_potential is None :
+                    driver.evaluator.global_hartree_potential = np.zeros_like(driver.density)
+                global_hartree = driver.evaluator.global_hartree_potential
+            self.gsystem.sub_value(hartree_potential_full, global_hartree, isub = isub)
 
     def set_global_potential_pdft(self, approximate = 'same', **kwargs):
         r"""

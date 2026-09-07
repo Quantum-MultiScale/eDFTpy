@@ -681,6 +681,17 @@
 			"comment": "Whether to use MT correction for the embedding potential.",
 			"options": "True, False"
 		},
+        "mt_neutral_potential": {
+            "type": "str",
+            "default": null,
+            "comment": "The input file for the MT neutral potential (e.g. a .snpy potential file)."
+        },
+        "mt_screening": {
+            "type": "bool",
+            "default": false,
+            "comment": "Whether to also output the true screening potential vscreen[n_J] = v[n_J](own-only periodic, this fragment alone with no other fragments present) - vbar[n_J](own-only isolated/MT), per eq 12 of Tolle et al. (Int. J. Quantum Chem. 2019, 119, e25801). Only written when mt=True. Distinct from embedpot (v[n]-vbar[n_J], evaluated within this fragment's real environment). Written to <embedpot prefix>.screen<embedpot extension>.",
+            "options": "True, False"
+        },
 		"exttype": {
 			"type": "int",
 			"options": "0, 1,..., 7",
