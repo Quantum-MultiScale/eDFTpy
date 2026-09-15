@@ -154,29 +154,21 @@ def optimize_embed(config, optimizer, lprint = False, mt = False, **kwargs):
             optimizer.set_global_potential()
 
         if has_cell_cut:
-            global_embedding_potential = np.zeros(tuple(global_nr), dtype=float)
-#            print("Global embedding potential initial", np.shape(global_embedding_potential))
+            # Rebuilt to avoid memory blowup: allgather -> gather(root=0), one array
+            # instead of duplicated per-rank buffers.
             local_contributions = [(j, np.array(other_driver.evaluator.global_potential.data), tuple(other_driver.grid.nrR)) for j, other_driver in enumerate(optimizer.drivers) if other_driver is not None]
-            all_contributions = graphtopo.comm.allgather(local_contributions)
+            gathered = graphtopo.comm.gather(local_contributions, root=0)
+
+            global_grid = Grid(optimizer.gsystem.grid.lattice, nr=tuple(global_nr))
+            global_data = np.zeros(tuple(global_nr), dtype=float)
             if graphtopo.is_root:
-                for contributions in all_contributions:
+                for contributions in gathered:
                     for j, data, shape in contributions:
                         data_reshaped = data.reshape(shape)
                         index_j = optimizer.gsystem.graphtopo.graph.get_sub_index(j, in_global=True)
-                        global_embedding_potential[index_j] = data_reshaped
-            global_grid = Grid(optimizer.gsystem.grid.lattice, nr=tuple(global_nr))
-            if graphtopo.is_root:
-                global_embedding_potential = Field(global_grid, data=global_embedding_potential)
-            else:
-                global_embedding_potential = Field(global_grid)
-            # Broadcast the data
-            if graphtopo.is_root:
-                data_to_broadcast = np.array(global_embedding_potential.data)
-            else:
-                data_to_broadcast = np.zeros(tuple(global_nr), dtype=float)
-            graphtopo.comm.Bcast(data_to_broadcast, root=0)
-            np.copyto(np.asarray(global_embedding_potential.data), data_to_broadcast)
-#            print("Global embedding potential final", np.shape(global_embedding_potential))
+                        global_data[index_j] = data_reshaped
+            graphtopo.comm.Bcast(global_data, root=0)
+            global_embedding_potential = Field(global_grid, data=global_data)
 
         for i, driver in enumerate(optimizer.drivers):
             if driver is None : continue
