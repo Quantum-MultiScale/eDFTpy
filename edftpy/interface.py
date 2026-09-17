@@ -156,7 +156,16 @@ def optimize_embed(config, optimizer, lprint = False, mt = False, **kwargs):
         if has_cell_cut:
             # Rebuilt to avoid memory blowup: allgather -> gather(root=0), one array
             # instead of duplicated per-rank buffers.
-            local_contributions = [(j, np.array(other_driver.evaluator.global_potential.data), tuple(other_driver.grid.nrR)) for j, other_driver in enumerate(optimizer.drivers) if other_driver is not None]
+            # DriverKS gathers the full potential/density onto its own comm.rank==0
+            # (see DriverKS docstring); other ranks of that subsystem don't hold the full
+            # nrR-shaped array, so only the local root's contribution is valid here - same
+            # gating condition already used for the per-driver write loop below.
+            local_contributions = []
+            for j, other_driver in enumerate(optimizer.drivers):
+                if other_driver is None :
+                    continue
+                if other_driver.technique == 'OF' or other_driver.comm.rank == 0 or graphtopo.isub is None :
+                    local_contributions.append((j, np.array(other_driver.evaluator.global_potential.data), tuple(other_driver.grid.nrR)))
             gathered = graphtopo.comm.gather(local_contributions, root=0)
 
             global_grid = Grid(optimizer.gsystem.grid.lattice, nr=tuple(global_nr))
