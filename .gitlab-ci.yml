@@ -1,17 +1,42 @@
-#image: registry.gitlab.com/shaoxc/qepy:qepy-7.2g-dev
-image: registry.gitlab.com/pavanello-research-group/edftpy:qepy-7.2g
+image: registry.gitlab.com/shaoxc/qepy:qepy-7.2g-dev
+#image: registry.gitlab.com/pavanello-research-group/edftpy:qepy-7.2g
 
 Test:
   before_script:
-    - home=$( pwd )
-    #- git clone -b mpi2 https://gitlab.com/pavanello-research-group/dftpy.git
-    #- cd dftpy
-    #- python setup.py install --user
-    #- cd ..
+    - home=$(pwd)
+
+    # Install DFTpy
+    - git clone -b mpi2 https://github.com/Quantum-MultiScale/DFTpy.git
+    - cd DFTpy
+    - python -m pip install .
+    - cd ..
+
+    # Install MBX dependencies
+    - apt-get update
+    - apt-get install -y autoconf automake libtool libgsl-dev libfftw3-dev
+
+    # Clone and build MBX
+    - git clone https://gitlab.com/xinchen_compchem/mbx-python-old.git
+    - cd mbx-python-old
+    - autoreconf -fi
+    - ./configure --disable-optimization --enable-shared --prefix=$HOME/mbx
+
+    # Fix linker flags
+    - sed -i 's/LIBS = -lgslcblas -lgsl -lfftw3/LIBS = -lgsl -lgslcblas -lfftw3 -lpthread -fopenmp/' Makefile
+
+    - make -j$(nproc)
+    - make install
+
+    # MBX Python interface
+    - export MBX_HOME=$HOME/mbx
+    - export PYTHONPATH=$PYTHONPATH:$home/mbx-python-old/plugins/python
+    - cd ..
+
   script:
-   - python -m pip install .
-   - cd examples
-   - pytest --cov-report term-missing --cov=./ ./test/
-   - export MPIRUN="mpirun --allow-run-as-root --oversubscribe -n 4"
-   - for d in $(find ./mpitest/ -maxdepth 1 -mindepth 1 -type d); do cd $d; ./run.sh ; cd ../..; done
+    - python -m pip install .
+    - cd examples
+    - pytest --cov-report term-missing --cov=./ ./examples/test/
+    - export MPIRUN="mpirun --allow-run-as-root --oversubscribe -n 4"
+    - for d in $(find ./mpitest/ -maxdepth 1 -mindepth 1 -type d); do cd "$d"; ./run.sh; cd ../..; done
+
   coverage: '/TOTAL\s+\d+\s+\d+\s+(\d+\%)/'

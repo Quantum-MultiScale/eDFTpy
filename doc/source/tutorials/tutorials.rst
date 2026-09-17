@@ -1,40 +1,16 @@
 .. _tutorials:
 
+=========
 Tutorials
 =========
 
-Config of eDFTpy script
------------------------
-
-.. toctree::
-   :maxdepth: 1
-
-   config
-
-DFTpy
------
-
-.. toctree::
-   :maxdepth: 1
-
-   ofdft/dftpy/dftpy
-
-QUANTUM-ESPRESSO
-----------------
+This repository contains tutorials for subsystem embedding calculations using **Subsystem DFT (sDFT)** and **QM/MM** approaches.
 
 .. toctree::
    :maxdepth: 2
 
-   ksdft/qe/qe
-
-sDFT using eDFTpy
------------------
-
-.. toctree::
-   :maxdepth: 2
-
-   sdft/optimize/optimize
-   sdft/optimize-2/optimize-2
-   sdft/relax/relax
-   sdft/md/md
-
+   theory/theory
+   configuration
+   basic_sdft
+   advanced_embedding
+   parent_packages

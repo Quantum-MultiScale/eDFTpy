@@ -8,7 +8,6 @@ import copy
 
 from dftpy.constants import LEN_CONV
 
-from edftpy.io import ions2ase
 from edftpy.engine.engine import Engine
 
 try:
@@ -227,7 +226,7 @@ class EngineQE(Engine):
         card_lines = []
 
         if ions is not None :
-            ase_atoms = ions2ase(ions)
+            ase_atoms = ions.to_ase()
         else :
             ase_atoms = None
 
@@ -311,21 +310,21 @@ class EngineQE(Engine):
         if cards is None or len(cards) == 0 :
             return
         lines = iter(cards)
-        items = ['CONSTRAINTS', 'OCCUPATIONS', 'ATOMIC_FORCES', 'HUBBARD']
+        items = ['CONSTRAINTS', 'OCCUPATIONS', 'ATOMIC_FORCES','HUBBARD']
         for line in lines :
             if line.split()[0] in items :
-                if line.split()[0] == 'HUBBARD':
+               if line.split()[0] == 'HUBBARD':
                    fd.write(line + '\n')
                    for line in lines :
                        fd.write(line + '\n') 
                    fd.write('\n')
-                else:
-                    fd.write('\n' + line + '\n')
-                    for line in lines :
-                        if not line[0] == '#' and line.split()[0].isupper():
-                            break
-                        else :
-                            fd.write(line + '\n')
+               else:
+                   fd.write('\n' + line + '\n')
+                   for line in lines :
+                       if not line[0] == '#' and line.split()[0].isupper():
+                           break
+                       else :
+                           fd.write(line + '\n')
         return
 
     def _write_params_others(self, fd, params = None, prefix = 'sub_', keys = ['inputtddft'], **kwargs):
