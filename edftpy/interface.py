@@ -211,7 +211,6 @@ def optimize_embed(config, optimizer, lprint = False, mt = False, **kwargs):
                         shift = np.round(shift_index).astype(int)
                         if not np.allclose(shift_index, shift, atol=1e-6):
                             sprint(f"Warning: cell-cut shift for subsystem {i} is not integer ({shift_index}), rounding - check sub_shape/local_shape consistency")
-                        sprint(f"DEBUG subsystem {i}: grid_shape={grid_shape} local_shape={local_shape} sub_shape={sub_shape} sub_shift={sub_shift} shift={shift} wraps={shift + local_shape > grid_shape}")
                         data = np.roll(data_global, shift=tuple(shift), axis=(0, 1, 2))
                         subsystem_potential = Field(global_grid, data=data)
 

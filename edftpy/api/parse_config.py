@@ -394,6 +394,12 @@ def config2total_embed(config, driver = None, optimizer = None, mt = False, **kw
             ions = driver.subcell.ions
             if has_cell_cut:
                 total_embed = driver.embed_evaluator
+                # PSEUDO/XC: subcell.grid -> driver.grid.
+                if 'PSEUDO' in total_embed.funcdicts :
+                    pseudo_full = total_embed.funcdicts['PSEUDO'].restart(grid=driver.grid, ions=ions, duplicate=True)
+                    total_embed.funcdicts['PSEUDO'] = pseudo_full
+                    if 'XC' in total_embed.funcdicts :
+                        total_embed.funcdicts['XC'].pseudo = pseudo_full
                 # add core density to XC
                 if 'XC' in total_embed.funcdicts :
                     if driver.core_density is not None :
