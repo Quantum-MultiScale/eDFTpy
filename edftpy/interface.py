@@ -193,26 +193,15 @@ def optimize_embed(config, optimizer, lprint = False, mt = False, **kwargs):
                         graph = optimizer.gsystem.graphtopo.graph
 
                         grid_shape = np.array(optimizer.gsystem.grid.nrR)
-                        sub_shift = np.array(graph.sub_shift[i])
-                        sub_shape = np.array(graph.sub_shape[i])
-
-                        data_global = np.zeros(grid_shape)
-                        data_local = np.array(subsystem_potential)
-                        local_shape = np.array(data_local.shape)
-                        data_global[:local_shape[0],:local_shape[1],:local_shape[2]] = data_local
-
                         global_grid = Grid(optimizer.gsystem.grid.lattice, nr=tuple(grid_shape))
 
-                        # shift = sub_shift + sub_shape/2 - local_shape/2, an integer number
-                        # of grid points when local_shape == sub_shape.
-                        current_center = local_shape / 2.0
-                        target_center = sub_shift + sub_shape / 2.0
-                        shift_index = target_center - current_center
-                        shift = np.round(shift_index).astype(int)
-                        if not np.allclose(shift_index, shift, atol=1e-6):
-                            sprint(f"Warning: cell-cut shift for subsystem {i} is not integer ({shift_index}), rounding - check sub_shape/local_shape consistency")
-                        data = np.roll(data_global, shift=tuple(shift), axis=(0, 1, 2))
-                        subsystem_potential = Field(global_grid, data=data)
+                        # index = graph.get_sub_index(i, in_global=True): the same
+                        # placement/wraparound machinery used for density superposition
+                        # (GraphTopo.sub_to_global).
+                        index = graph.get_sub_index(i, in_global = True)
+                        data_global = np.zeros(grid_shape)
+                        data_global[index] = np.array(subsystem_potential)
+                        subsystem_potential = Field(global_grid, data=data_global)
 
                         potential = global_embedding_potential - subsystem_potential
                         write(outfile, potential, optimizer.gsystem.ions, data_type = 'potential')
