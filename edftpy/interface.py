@@ -198,29 +198,21 @@ def optimize_embed(config, optimizer, lprint = False, mt = False, **kwargs):
 
                         data_global = np.zeros(grid_shape)
                         data_local = np.array(subsystem_potential)
-                        local_shape = data_local.shape
+                        local_shape = np.array(data_local.shape)
                         data_global[:local_shape[0],:local_shape[1],:local_shape[2]] = data_local
-                        data = data_global
-                        shape = data.shape
 
                         global_grid = Grid(optimizer.gsystem.grid.lattice, nr=tuple(grid_shape))
-                        spacings = np.array(global_grid.spacings)
 
-                        coords = np.indices(shape)
-                        weights = np.abs(data)
-                        current_center = np.array(local_shape) / 2.0
+                        # shift = sub_shift + sub_shape/2 - local_shape/2, an integer number
+                        # of grid points when local_shape == sub_shape.
+                        current_center = local_shape / 2.0
                         target_center = sub_shift + sub_shape / 2.0
                         shift_index = target_center - current_center
-
-                        total_shift_real = shift_index * spacings
-
-                        k = [2*np.pi*np.fft.fftfreq(shape[d], d=spacings[d]) for d in range(3)]
-                        K = np.meshgrid(*k, indexing='ij')
-                        phase = np.exp(-1j * (K[0]*total_shift_real[0] +
-                                              K[1]*total_shift_real[1] +
-                                              K[2]*total_shift_real[2] ))
-                        data_fft = np.fft.fftn(data)
-                        data = np.real(np.fft.ifftn(data_fft * phase))
+                        shift = np.round(shift_index).astype(int)
+                        if not np.allclose(shift_index, shift, atol=1e-6):
+                            sprint(f"Warning: cell-cut shift for subsystem {i} is not integer ({shift_index}), rounding - check sub_shape/local_shape consistency")
+                        sprint(f"DEBUG subsystem {i}: grid_shape={grid_shape} local_shape={local_shape} sub_shape={sub_shape} sub_shift={sub_shift} shift={shift} wraps={shift + local_shape > grid_shape}")
+                        data = np.roll(data_global, shift=tuple(shift), axis=(0, 1, 2))
                         subsystem_potential = Field(global_grid, data=data)
 
                         potential = global_embedding_potential - subsystem_potential
