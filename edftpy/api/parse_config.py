@@ -394,12 +394,33 @@ def config2total_embed(config, driver = None, optimizer = None, mt = False, **kw
             ions = driver.subcell.ions
             if has_cell_cut:
                 total_embed = driver.embed_evaluator
-                # PSEUDO/XC: subcell.grid -> driver.grid.
-                if 'PSEUDO' in total_embed.funcdicts :
+                # XC pseudo: subcell.grid -> driver.grid
+                if 'XC' in total_embed.funcdicts :
+                    pseudo_xc_full = total_embed.funcdicts['XC'].pseudo.restart(grid=driver.grid, ions=ions, duplicate=True)
+                    total_embed.funcdicts['XC'].pseudo = pseudo_xc_full
+                if config[driver.key].get("mt", False) :
+                    # ions: local frame -> global frame, mt = global cell
+                    origin_frac = np.array(driver.subcell.grid.shift) / np.array(grid.nrR)
+                    origin_cart = origin_frac @ np.array(grid.lattice)
+                    ions_mt = Ions(
+                        numbers = driver.subcell.ions.numbers,
+                        positions = np.array(driver.subcell.ions.positions) + origin_cart,
+                        cell = grid.lattice,
+                        charges = driver.subcell.ions.charges,
+                    )
+                    M_T_global = _get_mt_screening(grid, mt=True)
+                    if 'PSEUDO' in total_embed.funcdicts :
+                        pseudo_local = total_embed.funcdicts['PSEUDO']
+                        pseudo_global = pseudo_local.__class__(grid=grid, ions=ions_mt,
+                            readpp=pseudo_local.readpp, PME=pseudo_local.PME,
+                            BsplineOrder=pseudo_local.BsplineOrder, mt=M_T_global)
+                        total_embed.funcdicts['PSEUDO'] = pseudo_global
+                    if 'HARTREE' in total_embed.funcdicts :
+                        total_embed.funcdicts['HARTREE'] = Hartree(mt=M_T_global)
+                elif 'PSEUDO' in total_embed.funcdicts :
+                    # PSEUDO: subcell.grid -> driver.grid
                     pseudo_full = total_embed.funcdicts['PSEUDO'].restart(grid=driver.grid, ions=ions, duplicate=True)
                     total_embed.funcdicts['PSEUDO'] = pseudo_full
-                    if 'XC' in total_embed.funcdicts :
-                        total_embed.funcdicts['XC'].pseudo = pseudo_full
                 # add core density to XC
                 if 'XC' in total_embed.funcdicts :
                     if driver.core_density is not None :
