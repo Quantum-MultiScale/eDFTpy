@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Optimization of Density with Heterogeneous susbsystems &mdash; eDFTpy 0.0.1 documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/graphviz.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/panels-main.c949a650a448cc0ae9fd3441c0e17fb0.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/panels-bootstrap.5fd3999ee7762ccc51105388f4a9d115.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/panels-variables.06eb56fa6e07937060861dad626602ad.css" type="text/css" />
+    <link rel="shortcut icon" href="../../../_static/edftpy.ico"/>
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="Relaxation of Structure" href="../relax/relax.html" />
+    <link rel="prev" title="Optimization of Density" href="../optimize/optimize.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #bdc3c7" >
+            <a href="../../../index.html">
+            <img src="../../../_static/edftpy.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../../contact.html">Contact</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../tutorials.html">Tutorials</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials.html#config-of-edftpy-script">Config of eDFTpy script</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials.html#dftpy">DFTpy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials.html#quantum-espresso">QUANTUM-ESPRESSO</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../../tutorials.html#sdft-using-edftpy">sDFT using eDFTpy</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../optimize/optimize.html">Optimization of Density</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">Optimization of Density with Heterogeneous susbsystems</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#input-files">Input Files</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#running-edftpy">Running eDFTpy</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#output-files">Output Files</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../relax/relax.html">Relaxation of Structure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../md/md.html">Molecular Dynamics Simulation</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../cmdline.html">Command lines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../releases.html">Stable releases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../faq.html">Frequently Asked Questions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #bdc3c7" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">eDFTpy</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="../../tutorials.html">Tutorials</a> &raquo;</li>
+      <li>Optimization of Density with Heterogeneous susbsystems</li>
+      <li class="wy-breadcrumbs-aside">
+        
+			<a href=../../../genindex.html>Index</a>
+		
+          
+			<a href="https://gitlab.com/pavanello-research-group/edftpy/tree/master/doc/source/tutorials/sdft/optimize-2/optimize-2.rst">Source</a>
+          
+        
+      </li>
+    
+  </ul><div class="rst-breadcrumbs-buttons" role="navigation" aria-label="Sequential page navigation">
+        <a href="../optimize/optimize.html" class="btn btn-neutral float-left" title="Optimization of Density" accesskey="p"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../relax/relax.html" class="btn btn-neutral float-right" title="Relaxation of Structure" accesskey="n">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+  </div>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<section id="optimization-of-density-with-heterogeneous-susbsystems">
+<span id="optimize-2"></span><h1>Optimization of Density with Heterogeneous susbsystems<a class="headerlink" href="#optimization-of-density-with-heterogeneous-susbsystems" title="Permalink to this headline">¶</a></h1>
+<p>This tutorial assumes the user has already finished the <a class="reference internal" href="../optimize/optimize.html#optimize"><span class="std std-ref">Optimization of Density</span></a> tutorial, using the automatic definition of subsystems when you have the same chemical nature for each subsystem or have previous experience setting up QE calculations. This tutorial will focus on the details, to run a calculation that requires including a manual definition of subsystems combined with the adaptive definition of subsystems to run an SCF calculation of a global system composed of a binary salt (NaCl) molecule surrounded by a water dimer.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>To avoid mixing some files, we strongly recommend setup each calculation (e.g. Optimization of density, relaxation of a structure of an MD simulation) in separate folders.</p>
+</div>
+<section id="input-files">
+<h2>Input Files<a class="headerlink" href="#input-files" title="Permalink to this headline">¶</a></h2>
+<p>Following the input description provided in the previous SCF Calculation for a water dimer, you also requiere the global system coordinates and the eDFTpy input file.</p>
+<details class="sphinx-bs dropdown card mb-3">
+<summary class="summary-title card-header">
+salt_h2o_2.xyz<div class="summary-down docutils">
+<svg version="1.1" width="24" height="24" class="octicon octicon-chevron-down" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M5.22 8.72a.75.75 0 000 1.06l6.25 6.25a.75.75 0 001.06 0l6.25-6.25a.75.75 0 00-1.06-1.06L12 14.44 6.28 8.72a.75.75 0 00-1.06 0z"></path></svg></div>
+<div class="summary-up docutils">
+<svg version="1.1" width="24" height="24" class="octicon octicon-chevron-up" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M18.78 15.28a.75.75 0 000-1.06l-6.25-6.25a.75.75 0 00-1.06 0l-6.25 6.25a.75.75 0 101.06 1.06L12 9.56l5.72 5.72a.75.75 0 001.06 0z"></path></svg></div>
+</summary><div class="summary-content card-body docutils">
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">8</span>
+<span class="n">Lattice</span><span class="o">=</span><span class="s2">&quot;12.0 0.0 0.0 0.0 12.0 0.0 0.0 0.0 12.0&quot;</span> <span class="n">Properties</span><span class="o">=</span><span class="n">species</span><span class="p">:</span><span class="n">S</span><span class="p">:</span><span class="mi">1</span><span class="p">:</span><span class="n">pos</span><span class="p">:</span><span class="n">R</span><span class="p">:</span><span class="mi">3</span> <span class="n">pbc</span><span class="o">=</span><span class="s2">&quot;T T T&quot;</span>
+<span class="n">Na</span>       <span class="mf">2.000000000000000</span>      <span class="mf">2.500000000000000</span>      <span class="mf">4.200000000000000</span>
+<span class="n">Cl</span>       <span class="mf">6.000000000000000</span>      <span class="mf">7.500000000000000</span>      <span class="mf">9.199999999999999</span>
+<span class="n">O</span>        <span class="mf">2.000000000000000</span>      <span class="mf">2.000000000000000</span>      <span class="mf">2.119262000000000</span>
+<span class="n">H</span>        <span class="mf">2.000000000000000</span>      <span class="mf">2.763239000000000</span>      <span class="mf">1.522953000000000</span>
+<span class="n">H</span>        <span class="mf">2.000000000000000</span>      <span class="mf">1.236761000000000</span>      <span class="mf">1.522953000000000</span>
+<span class="n">O</span>        <span class="mf">6.000000000000000</span>      <span class="mf">6.000000000000000</span>      <span class="mf">6.119262000000000</span>
+<span class="n">H</span>        <span class="mf">6.000000000000000</span>      <span class="mf">6.763239000000000</span>      <span class="mf">5.522953000000000</span>
+<span class="n">H</span>        <span class="mf">6.000000000000000</span>      <span class="mf">5.236761000000000</span>      <span class="mf">5.522953000000000</span>
+</pre></div>
+</div>
+</div>
+</details><details class="sphinx-bs dropdown card mb-3">
+<summary class="summary-title card-header">
+input.ini<div class="summary-down docutils">
+<svg version="1.1" width="24" height="24" class="octicon octicon-chevron-down" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M5.22 8.72a.75.75 0 000 1.06l6.25 6.25a.75.75 0 001.06 0l6.25-6.25a.75.75 0 00-1.06-1.06L12 14.44 6.28 8.72a.75.75 0 00-1.06 0z"></path></svg></div>
+<div class="summary-up docutils">
+<svg version="1.1" width="24" height="24" class="octicon octicon-chevron-up" viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" d="M18.78 15.28a.75.75 0 000-1.06l-6.25-6.25a.75.75 0 00-1.06 0l-6.25 6.25a.75.75 0 101.06 1.06L12 9.56l5.72 5.72a.75.75 0 001.06 0z"></path></svg></div>
+</summary><div class="summary-content card-body docutils">
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">JOB</span><span class="p">]</span>
+<span class="n">task</span>               <span class="o">=</span> <span class="n">Optdensity</span>
+
+<span class="p">[</span><span class="n">PATH</span><span class="p">]</span>
+<span class="n">pp</span>                 <span class="o">=</span> <span class="o">./</span>
+<span class="n">cell</span>               <span class="o">=</span> <span class="o">./</span>
+
+<span class="p">[</span><span class="n">PP</span><span class="p">]</span>
+<span class="n">O</span>                  <span class="o">=</span> <span class="n">o_pbe_v1</span><span class="mf">.2</span><span class="o">.</span><span class="n">uspp</span><span class="o">.</span><span class="n">F</span><span class="o">.</span><span class="n">UPF</span>
+<span class="n">H</span>                  <span class="o">=</span> <span class="n">h_pbe_v1</span><span class="mf">.4</span><span class="o">.</span><span class="n">uspp</span><span class="o">.</span><span class="n">F</span><span class="o">.</span><span class="n">UPF</span>
+<span class="n">Na</span>                 <span class="o">=</span> <span class="n">na_pbe_v1</span><span class="mf">.5</span><span class="o">.</span><span class="n">uspp</span><span class="o">.</span><span class="n">F</span><span class="o">.</span><span class="n">UPF</span>
+<span class="n">Cl</span>                 <span class="o">=</span> <span class="n">cl_pbe_v1</span><span class="mf">.4</span><span class="o">.</span><span class="n">uspp</span><span class="o">.</span><span class="n">F</span><span class="o">.</span><span class="n">UPF</span> 
+
+<span class="p">[</span><span class="n">OPT</span><span class="p">]</span>
+<span class="n">maxiter</span>            <span class="o">=</span> <span class="mi">200</span>
+<span class="n">econv</span>              <span class="o">=</span> <span class="mf">1e-6</span>
+
+<span class="p">[</span><span class="n">MOL</span><span class="p">]</span>
+<span class="n">charge</span><span class="o">-</span><span class="n">Na</span>  <span class="o">=</span> <span class="mi">1</span>
+<span class="n">charge</span><span class="o">-</span><span class="n">H2O</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">charge</span><span class="o">-</span><span class="n">Cl</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+
+<span class="p">[</span><span class="n">GSYSTEM</span><span class="p">]</span>
+<span class="n">cell</span><span class="o">-</span><span class="n">file</span>          <span class="o">=</span> <span class="n">salt_h2o_2</span><span class="o">.</span><span class="n">xyz</span>
+<span class="n">grid</span><span class="o">-</span><span class="n">ecut</span>          <span class="o">=</span> <span class="mi">1200</span>
+<span class="n">exc</span><span class="o">-</span><span class="n">x_str</span>          <span class="o">=</span> <span class="n">gga_x_pbe</span>
+<span class="n">exc</span><span class="o">-</span><span class="n">c_str</span>          <span class="o">=</span> <span class="n">gga_c_pbe</span>
+<span class="n">kedf</span><span class="o">-</span><span class="n">kedf</span>          <span class="o">=</span> <span class="n">GGA</span>
+<span class="n">kedf</span><span class="o">-</span><span class="n">k_str</span>         <span class="o">=</span> <span class="n">revAPBEK</span>
+<span class="n">density</span><span class="o">-</span><span class="n">output</span>     <span class="o">=</span> <span class="n">total</span><span class="o">.</span><span class="n">xsf</span>
+<span class="n">mix</span><span class="o">-</span><span class="n">coef</span>            <span class="o">=</span> <span class="mf">0.2</span>
+
+<span class="p">[</span><span class="n">SUB_NA</span><span class="p">]</span>
+<span class="n">calculator</span>         <span class="o">=</span> <span class="n">qe</span>
+<span class="n">embed</span>              <span class="o">=</span> <span class="n">KE</span> <span class="n">XC</span>
+<span class="n">cell</span><span class="o">-</span><span class="n">split</span>         <span class="o">=</span> <span class="mf">0.5</span> <span class="mf">0.5</span> <span class="mf">0.5</span>
+<span class="n">cell</span><span class="o">-</span><span class="n">index</span>         <span class="o">=</span> <span class="mi">0</span><span class="p">:</span><span class="mi">1</span>
+<span class="n">grid</span><span class="o">-</span><span class="n">ecut</span>          <span class="o">=</span> <span class="mi">2400</span>
+<span class="n">mix</span><span class="o">-</span><span class="n">coef</span>           <span class="o">=</span> <span class="mf">0.7</span>
+<span class="n">density</span><span class="o">-</span><span class="n">output</span>     <span class="o">=</span> <span class="o">.</span><span class="n">xsf</span>
+
+
+<span class="p">[</span><span class="n">SUB_CL</span><span class="p">]</span>
+<span class="n">calculator</span>         <span class="o">=</span> <span class="n">qe</span>
+<span class="n">embed</span>              <span class="o">=</span> <span class="n">KE</span> <span class="n">XC</span>
+<span class="n">cell</span><span class="o">-</span><span class="n">split</span>         <span class="o">=</span> <span class="mf">0.5</span> <span class="mf">0.5</span> <span class="mf">0.5</span>
+<span class="n">cell</span><span class="o">-</span><span class="n">index</span>         <span class="o">=</span> <span class="mi">1</span><span class="p">:</span><span class="mi">2</span>
+<span class="n">grid</span><span class="o">-</span><span class="n">ecut</span>          <span class="o">=</span> <span class="mi">2400</span>
+<span class="n">mix</span><span class="o">-</span><span class="n">coef</span>           <span class="o">=</span> <span class="mf">0.7</span>
+<span class="n">density</span><span class="o">-</span><span class="n">output</span>     <span class="o">=</span> <span class="o">.</span><span class="n">xsf</span>
+
+
+<span class="p">[</span><span class="n">SUB_H2O</span><span class="p">]</span>
+<span class="n">calculator</span>         <span class="o">=</span> <span class="n">qe</span>
+<span class="n">embed</span>              <span class="o">=</span> <span class="n">KE</span> <span class="n">XC</span>
+<span class="n">cell</span><span class="o">-</span><span class="n">split</span>         <span class="o">=</span> <span class="mf">0.5</span> <span class="mf">0.5</span> <span class="mf">0.5</span>
+<span class="n">cell</span><span class="o">-</span><span class="n">index</span>         <span class="o">=</span> <span class="mi">2</span><span class="p">:</span>
+<span class="n">decompose</span><span class="o">-</span><span class="n">method</span>   <span class="o">=</span> <span class="n">distance</span>
+<span class="n">decompose</span><span class="o">-</span><span class="n">radius</span><span class="o">-</span><span class="n">O</span> <span class="o">=</span> <span class="mf">0.90</span>
+<span class="n">decompose</span><span class="o">-</span><span class="n">radius</span><span class="o">-</span><span class="n">H</span> <span class="o">=</span> <span class="mf">0.60</span>
+<span class="n">grid</span><span class="o">-</span><span class="n">ecut</span>          <span class="o">=</span> <span class="mi">2400</span>
+<span class="n">mix</span><span class="o">-</span><span class="n">coef</span>           <span class="o">=</span> <span class="mf">0.7</span>
+<span class="n">density</span><span class="o">-</span><span class="n">output</span>     <span class="o">=</span> <span class="o">.</span><span class="n">xsf</span>
+</pre></div>
+</div>
+</div>
+</details><p>This eDFTpy input file includes the same section’s flags with the addition of some keywords and sections, as described below:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="../../config.html#pp"><span class="std std-ref">[PP]</span></a></p></li>
+</ul>
+<p>Addition of Sodium(I) and Chloride pseudopotentials</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">O</span>                  <span class="o">=</span> <span class="n">O_ONCV_PBE</span><span class="o">-</span><span class="mf">1.2</span><span class="o">.</span><span class="n">upf</span>
+<span class="n">H</span>                  <span class="o">=</span> <span class="n">H_ONCV_PBE</span><span class="o">-</span><span class="mf">1.2</span><span class="o">.</span><span class="n">upf</span>
+<span class="n">Na</span>                 <span class="o">=</span> <span class="n">Na_pbe_v1</span><span class="mf">.5</span><span class="o">.</span><span class="n">uspp</span><span class="o">.</span><span class="n">F</span><span class="o">.</span><span class="n">UPF</span>
+<span class="n">Cl</span>                 <span class="o">=</span> <span class="n">Cl_pbe_v1</span><span class="mf">.4</span><span class="o">.</span><span class="n">uspp</span><span class="o">.</span><span class="n">F</span><span class="o">.</span><span class="n">UPF</span> 
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><a class="reference internal" href="../../config.html#mol"><span class="std std-ref">[MOL]</span></a></p></li>
+</ul>
+<p>This new section includes the charge of the molecules and atoms, note that in this tutorial this section is mandatory due to the presence of charge subsystems, this section should describe the total type of molecules listed in the subsystems section.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">charge</span><span class="o">-</span><span class="n">Na</span>  <span class="o">=</span> <span class="mi">1</span>
+<span class="n">charge</span><span class="o">-</span><span class="n">H2O</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">charge</span><span class="o">-</span><span class="n">Cl</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>eDFTpy only can simulate neutral globral systems.</p>
+</div>
+<ul class="simple">
+<li><p><a class="reference internal" href="../../config.html#sub-prefix"><span class="std std-ref">[SUB_NA]</span></a></p></li>
+</ul>
+<p>Input definition of the Sodium (I) subsystem</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">calculator</span>         <span class="o">=</span> <span class="n">qe</span>
+<span class="n">embed</span>              <span class="o">=</span> <span class="n">KE</span> <span class="n">XC</span>
+<span class="n">cell</span><span class="o">-</span><span class="n">split</span>         <span class="o">=</span> <span class="mf">0.5</span> <span class="mf">0.5</span> <span class="mf">0.5</span>
+<span class="n">cell</span><span class="o">-</span><span class="n">index</span>         <span class="o">=</span> <span class="mi">0</span><span class="p">:</span><span class="mi">1</span>
+<span class="n">grid</span><span class="o">-</span><span class="n">ecut</span>          <span class="o">=</span> <span class="mi">2400</span>
+<span class="n">mix</span><span class="o">-</span><span class="n">coef</span>           <span class="o">=</span> <span class="mf">0.7</span>
+<span class="n">density</span><span class="o">-</span><span class="n">output</span>     <span class="o">=</span> <span class="o">.</span><span class="n">xsf</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><a class="reference internal" href="../../config.html#sub-prefix"><span class="std std-ref">[SUB_ CL]</span></a></p></li>
+</ul>
+<p>Input definition of the Chloride subsystem</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">calculator</span>         <span class="o">=</span> <span class="n">qe</span>
+<span class="n">embed</span>              <span class="o">=</span> <span class="n">KE</span> <span class="n">XC</span>
+<span class="n">cell</span><span class="o">-</span><span class="n">split</span>         <span class="o">=</span> <span class="mf">0.5</span> <span class="mf">0.5</span> <span class="mf">0.5</span>
+<span class="n">cell</span><span class="o">-</span><span class="n">index</span>         <span class="o">=</span> <span class="mi">1</span><span class="p">:</span><span class="mi">2</span>            <span class="c1"># Correspond to the index of the second atom at the coordinates file </span>
+<span class="n">grid</span><span class="o">-</span><span class="n">ecut</span>          <span class="o">=</span> <span class="mi">2400</span> 
+<span class="n">mix</span><span class="o">-</span><span class="n">coef</span>           <span class="o">=</span> <span class="mf">0.7</span>            <span class="c1"># Mixing parameter</span>
+<span class="n">density</span><span class="o">-</span><span class="n">output</span>     <span class="o">=</span> <span class="o">.</span><span class="n">xsf</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><a class="reference internal" href="../../config.html#sub-prefix"><span class="std std-ref">[SUB_ H2O]</span></a></p></li>
+</ul>
+<p>Water subsystems will be defined using the same automatic definition based on the average radii starting at the third atom position of the <cite>cell_file</cite></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cell</span><span class="o">-</span><span class="n">index</span>         <span class="o">=</span> <span class="mi">2</span><span class="p">:</span>
+<span class="n">decompose</span><span class="o">-</span><span class="n">method</span>   <span class="o">=</span> <span class="n">distance</span>
+<span class="n">decompose</span><span class="o">-</span><span class="n">radius</span><span class="o">-</span><span class="n">O</span> <span class="o">=</span> <span class="mf">0.90</span>
+<span class="n">decompose</span><span class="o">-</span><span class="n">radius</span><span class="o">-</span><span class="n">H</span> <span class="o">=</span> <span class="mf">0.60</span>
+<span class="n">grid</span><span class="o">-</span><span class="n">ecut</span>          <span class="o">=</span> <span class="mi">2400</span>
+<span class="n">mix</span><span class="o">-</span><span class="n">coef</span>           <span class="o">=</span> <span class="mf">0.7</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Unlike the basic SCF tutorial in this input parameter, we also include a mixing parameter for the water subsystem to keep consistency with the other subsystems, you can use different mixing parameter values for each subsystem if you require it.</p>
+</div>
+</section>
+<section id="running-edftpy">
+<h2>Running eDFTpy<a class="headerlink" href="#running-edftpy" title="Permalink to this headline">¶</a></h2>
+<p>Type the command below to run the calculation set up before:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ mpirun -n 4 python -m edftpy input.ini
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>To carry out this tutorial you are required to have a computer with at least four (4) available cores of processing, if you would prefer you can use a bigger number of cores if they are available in your computer unit.</p>
+</div>
+</section>
+<section id="output-files">
+<h2>Output Files<a class="headerlink" href="#output-files" title="Permalink to this headline">¶</a></h2>
+<p>This calculation will generate the same categories of outputs discussed in the SCF base tutorial with additional files for the ions subsystems following:</p>
+<section id="outputs-to-check">
+<h3>Outputs to Check<a class="headerlink" href="#outputs-to-check" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+<div><ul class="simple">
+<li><p><cite>edftpy_running.json</cite> Extended input file which contains all the calculation setup</p></li>
+<li><p><cite>edftpy_gsystem.xyz</cite> Coordinates file for the output strcuture</p></li>
+</ul>
+</div></blockquote>
+</section>
+<section id="outputs-of-subsytem-driver">
+<h3>Outputs of subsytem driver<a class="headerlink" href="#outputs-of-subsytem-driver" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+<div><ul class="simple">
+<li><p><cite>sub_prefix.xyz</cite> Output coordinates for each subsystem driver</p></li>
+<li><p><cite>sub_prefix.out</cite> Output file of each susbsytem driver</p></li>
+</ul>
+</div></blockquote>
+</section>
+<section id="temporary-files-of-subsystem-driver">
+<h3>Temporary files of Subsystem driver<a class="headerlink" href="#temporary-files-of-subsystem-driver" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+<div><ul class="simple">
+<li><p><cite>sub_prefix.tmp</cite> Temporary folder of each subsystem driver</p></li>
+</ul>
+</div></blockquote>
+</section>
+<section id="other-properties-files-defined-in-input-file">
+<h3>Other properties files defined in input file<a class="headerlink" href="#other-properties-files-defined-in-input-file" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+<div><ul class="simple">
+<li><p>Density of global system Saved in the <cite>total.xsf</cite></p></li>
+<li><p>Density of each subsystem(s) Saved in  <cite>sub_prefix.xsf</cite></p></li>
+</ul>
+</div></blockquote>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../optimize/optimize.html" class="btn btn-neutral float-left" title="Optimization of Density" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../relax/relax.html" class="btn btn-neutral float-right" title="Relaxation of Structure" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Pavanello Research Group.
+      <span class="lastupdated">Last updated on Thursday, 24 Jul 2025 15:13:26.
+      </span></p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+  
+<button onclick="topFunction()" id="btn" title="Go to top">Top</button>
+
+<script>
+var mybutton = document.getElementById("btn");
+
+window.onscroll = function() {scrollFunction()};
+
+function scrollFunction() {
+  if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+    mybutton.style.display = "block";
+  } else {
+    mybutton.style.display = "none";
+  }
+}
+
+function topFunction() {
+  document.body.scrollTop = 0;
+  document.documentElement.scrollTop = 0;
+}
+</script>
+
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

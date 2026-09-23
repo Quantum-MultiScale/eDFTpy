@@ -1,0 +1,2005 @@
+
+.. _config:
+
+===========================
+Run eDFTpy with input files
+===========================
+
+eDFTpy is a set of python modules. However,you can run it using the `edftpy` executable. Here's a quick guide to the available keywords.
+
+.. graphviz::
+
+    digraph config {
+           a0 [shape=box3d, label="JOB", href="../tutorials/config.html#job", target="_top"];
+           a1 [shape=box3d, label="PATH", href="../tutorials/config.html#path", target="_top"];
+           a6 [shape=box3d, label="GSYSTEM", href="../tutorials/config.html#gsystem", target="_top"];
+           a2 [shape=box3d, label="MATH", href="../tutorials/config.html#math", target="_top"];
+           a3 [shape=box3d, label="PP", href="../tutorials/config.html#pp", target="_top"];
+           a5 [shape=box3d, label="OPT", href="../tutorials/config.html#opt", target="_top"];
+           a4 [shape=box3d, label="OUTPUT", href="../tutorials/config.html#output", target="_top"];
+           a7 [shape=box3d, label="SUB", href="../tutorials/config.html#sub", target="_top"];
+           b601 [shape=rectangle, label="cell", href="../tutorials/config.html#cell", target="_top"];
+           b602 [shape=rectangle, label="grid", href="../tutorials/config.html#grid", target="_top"];
+           b603 [shape=rectangle, label="density", href="../tutorials/config.html#density", target="_top"];
+           b604 [shape=rectangle, label="exc", href="../tutorials/config.html#exc", target="_top"];
+           b605 [shape=rectangle, label="kedf", href="../tutorials/config.html#kedf", target="_top"];
+           b606 [shape=rectangle, label="decompose", href="../tutorials/config.html#decompose", target="_top"];
+           b707 [shape=rectangle, label="mix", href="../tutorials/config.html#mix", target="_top"];
+           b708 [shape=rectangle, label="opt", href="../tutorials/config.html#id2", target="_top"];
+           b709 [shape=rectangle, label="kpoints", href="../tutorials/config.html#kpoints", target="_top"];
+
+           a6->b601[color=blue];
+           a6->b602[color=blue];
+           a6->b603[color=blue];
+           a6->b604[color=blue];
+           a6->b605[color=blue];
+           a6->b606[color=blue];
+           a7->b601;
+           a7->b602;
+           a7->b603;
+           a7->b604;
+           a7->b605;
+           a7->b606;
+           a7->b707;
+           a7->b708;
+           a7->b709;
+        }
+
+.. warning::
+    `PP`_ is a mandatory input (i.e., no default is avaliable for it).
+
+.. note::
+    + Defaults work well for most arguments.
+    + When *Options* is empty, it can accept any value.
+    + When *Options* are separated by spaces, it can accept multiple values, with each value separated by a space.
+
+.. _pylibxc: https://tddft.org/programs/libxc/
+.. _dftd4: https://www.chemie.uni-bonn.de/pctc/mulliken-center/software/dftd4
+
+
+.. _JOB:
+
+
+JOB
+--------------------
+
+	Control of the running job.
+
+
+.. list-table::
+
+		* - :ref:`calctype<JOB--calctype>`
+		  - :ref:`task<JOB--task>`
+
+
+.. _JOB--task:
+
+**task**
+	The task to be performed. Optdensity solves for the electronic structure to selfconsistency. Calculation performs a one-shot evaluation of calctype (see below) without selconsistency.
+
+	- *Options* : Optdensity, Calculation, Tddft, Optmix
+
+	- *Default* : Optdensity
+
+
+.. _JOB--calctype:
+
+**calctype**
+	The property to be calculated.
+
+	- *Options* : Energy Potential Force Stress
+
+	- *Default* : Energy
+
+
+.. _PATH:
+
+
+PATH
+--------------------
+
+	Specify the path of needed files.
+
+
+.. list-table::
+
+		* - :ref:`cell<PATH--cell>`
+		  - :ref:`pp<PATH--pp>`
+
+
+.. _PATH--pp:
+
+**pp**
+	The path of pseudopotential.
+
+	- *Options* : 
+
+	- *Default* : ./
+
+
+.. _PATH--cell:
+
+**cell**
+	The path of input structure.
+
+	- *Options* : 
+
+	- *Default* : ./
+
+
+.. _MATH:
+
+
+MATH
+--------------------
+
+	Some methods and techniques that make DFTpy really fast.
+
+
+.. list-table::
+
+		* - :ref:`linearie<MATH--linearie>`
+		  - :ref:`linearii<MATH--linearii>`
+
+
+.. _MATH--linearii:
+
+**linearii**
+	Linear-scaling method to deal with Ion-Ion interactions (PME).
+
+	- *Options* : True, False
+
+	- *Default* : True
+
+
+.. _MATH--linearie:
+
+**linearie**
+	Linear-scaling method to deal with Ion-Electron interactions (PME).
+
+	- *Options* : True, False
+
+	- *Default* : True
+
+
+.. _PP:
+
+
+PP
+--------------------
+
+	Pseudopotential files for each atomic species
+
+	*e.g.* : 
+
+		Al = Al_lda.oe01.recpot
+
+.. _OUTPUT:
+
+
+OUTPUT
+--------------------
+
+	Control the output.
+
+
+.. list-table::
+
+		* - :ref:`append<OUTPUT--append>`
+		  - :ref:`electrostatic_potential<OUTPUT--electrostatic_potential>`
+		  - :ref:`sub_temp<OUTPUT--sub_temp>`
+		  - :ref:`time<OUTPUT--time>`
+
+
+.. _OUTPUT--electrostatic_potential:
+
+**electrostatic_potential**
+	Output of electrostatic potential
+
+	- *Options* : 
+
+	- *Default* : None
+
+
+.. _OUTPUT--sub_temp:
+
+**sub_temp**
+	Output all the temporary files of subsystems.
+
+	- *Options* : True, False
+
+	- *Default* : False
+
+
+.. _OUTPUT--append:
+
+**append**
+	Append the output of all the subsystems.
+
+	- *Options* : True, False
+
+	- *Default* : False
+
+
+.. _OUTPUT--time:
+
+**time**
+	Output the time information of all parts.
+
+	- *Options* : True, False
+
+	- *Default* : True
+
+
+.. _OPT:
+
+
+OPT
+--------------------
+
+	Control the charge density optimization of global system.
+
+
+.. list-table::
+
+		* - :ref:`econv<OPT--econv>`
+		  - :ref:`maxiter<OPT--maxiter>`
+		  - :ref:`maxtime<OPT--maxtime>`
+		  - :ref:`method<OPT--method>`
+		* - :ref:`ncheck<OPT--ncheck>`
+		  - :ref:`olevel<OPT--olevel>`
+		  - :ref:`pconv<OPT--pconv>`
+		  - :ref:`voltage<OPT--voltage>`
+
+
+.. _OPT--method:
+
+**method**
+	Charge density optimization method.
+
+	- *Options* : Normal
+
+	- *Default* : Normal
+
+
+.. _OPT--econv:
+
+**econv**
+	Convergence threshold for energy, it will divided by the number of atoms.
+
+	- *Options* : 
+
+	- *Default* : 1e-05
+
+	- *Unit* : a.u./atom
+
+
+.. _OPT--pconv:
+
+**pconv**
+	Convergence threshold for potential. Default is 'econv'/1E2.
+
+	- *Options* : 
+
+	- *Default* : None
+
+	- *Unit* : a.u/atom
+
+
+.. _OPT--maxiter:
+
+**maxiter**
+	The max steps for optimization.
+
+	- *Options* : 
+
+	- *Default* : 100
+
+
+.. _OPT--ncheck:
+
+**ncheck**
+	How many step satisfy the convergence.
+
+	- *Options* : 
+
+	- *Default* : 2
+
+
+.. _OPT--olevel:
+
+**olevel**
+	The level of output energy, large will faster.
+
+	- *Options* : 
+
+	- *Default* : 2
+
+.. note::
+ Only set 0, the energy of each cycle is useful.
+
+.. _OPT--maxtime:
+
+**maxtime**
+	Maximum execution time. Non-positive number means no time limit.
+
+	- *Options* : 
+
+	- *Default* : 0
+
+	- *Unit* : second
+
+
+.. _OPT--voltage:
+
+**voltage**
+	The voltage between first and second subsystems.
+
+	- *Options* : 
+
+	- *Default* : None
+
+	- *Unit* : a.u
+
+
+.. _TD:
+
+
+TD
+--------------------
+
+	Control the TDDFT.
+
+
+.. list-table::
+
+		* - :ref:`iter<TD--iter>`
+		  - :ref:`maxiter<TD--maxiter>`
+		  - :ref:`maxtime<TD--maxtime>`
+		  - :ref:`olevel<TD--olevel>`
+		* - :ref:`restart<TD--restart>`
+		  -
+		  -
+		  -
+
+
+.. _TD--maxiter:
+
+**maxiter**
+	The max steps for TDDFT.
+
+	- *Options* : 
+
+	- *Default* : 1000
+
+
+.. _TD--olevel:
+
+**olevel**
+	The level of output energy, large will faster.
+
+	- *Options* : 
+
+	- *Default* : 2
+
+.. note::
+ Only set 0, the energy of each cycle is useful.
+
+.. _TD--restart:
+
+**restart**
+	Start the job from new one, scf results or restart from previous run.
+
+	- *Options* : initial, scf, restart
+
+	- *Default* : initial
+
+
+.. _TD--iter:
+
+**iter**
+	The iteration number of restart.
+
+	- *Options* : 
+
+	- *Default* : 0
+
+
+.. _TD--maxtime:
+
+**maxtime**
+	Maximum execution time. Non-positive number means no time limit.
+
+	- *Options* : 
+
+	- *Default* : 0
+
+	- *Unit* : second
+
+
+.. _GSYSTEM:
+
+
+GSYSTEM
+--------------------
+
+
+.. list-table::
+
+		* - :ref:`cell-elename<cell-elename>`
+		  - :ref:`cell-file<cell-file>`
+		  - :ref:`cell-format<cell-format>`
+		  - :ref:`cell-lattice<cell-lattice>`
+		* - :ref:`cell-numbers<cell-numbers>`
+		  - :ref:`cell-positions<cell-positions>`
+		  - :ref:`cell-scaled_positions<cell-scaled_positions>`
+		  - :ref:`cell-symbols<cell-symbols>`
+		* - :ref:`cell-zval<cell-zval>`
+		  - :ref:`decompose-adaptive<decompose-adaptive>`
+		  - :ref:`decompose-method<decompose-method>`
+		  - :ref:`decompose-radius<decompose-radius>`
+		* - :ref:`decompose-rcut<decompose-rcut>`
+		  - :ref:`decompose-rtol<decompose-rtol>`
+		  - :ref:`density-file<density-file>`
+		  - :ref:`density-output<density-output>`
+		* - :ref:`environ-file<environ-file>`
+		  - :ref:`exc-c_str<exc-c_str>`
+		  - :ref:`exc-dftd4<exc-dftd4>`
+		  - :ref:`exc-libxc<exc-libxc>`
+		* - :ref:`exc-x_str<exc-x_str>`
+		  - :ref:`exc-xc<exc-xc>`
+		  - :ref:`grid-cplx<grid-cplx>`
+		  - :ref:`grid-ecut<grid-ecut>`
+		* - :ref:`grid-gfull<grid-gfull>`
+		  - :ref:`grid-maxprime<grid-maxprime>`
+		  - :ref:`grid-nr<grid-nr>`
+		  - :ref:`grid-optfft<grid-optfft>`
+		* - :ref:`grid-scale<grid-scale>`
+		  - :ref:`grid-spacing<grid-spacing>`
+		  - :ref:`kedf-alpha<kedf-alpha>`
+		  - :ref:`kedf-beta<kedf-beta>`
+		* - :ref:`kedf-delta<kedf-delta>`
+		  - :ref:`kedf-etamax<kedf-etamax>`
+		  - :ref:`kedf-interp<kedf-interp>`
+		  - :ref:`kedf-k_str<kedf-k_str>`
+		* - :ref:`kedf-kdd<kedf-kdd>`
+		  - :ref:`kedf-kedf<kedf-kedf>`
+		  - :ref:`kedf-kerneltype<kedf-kerneltype>`
+		  - :ref:`kedf-kfmax<kedf-kfmax>`
+		* - :ref:`kedf-kfmin<kedf-kfmin>`
+		  - :ref:`kedf-ldw<kedf-ldw>`
+		  - :ref:`kedf-lumpfactor<kedf-lumpfactor>`
+		  - :ref:`kedf-maxpoints<kedf-maxpoints>`
+		* - :ref:`kedf-neta<kedf-neta>`
+		  - :ref:`kedf-nsp<kedf-nsp>`
+		  - :ref:`kedf-order<kedf-order>`
+		  - :ref:`kedf-params<kedf-params>`
+		* - :ref:`kedf-ratio<kedf-ratio>`
+		  - :ref:`kedf-rho0<kedf-rho0>`
+		  - :ref:`kedf-rhomax<kedf-rhomax>`
+		  - :ref:`kedf-sigma<kedf-sigma>`
+		* - :ref:`kedf-symmetrization<kedf-symmetrization>`
+		  - :ref:`kedf-temperature<kedf-temperature>`
+		  - :ref:`kedf-temperature0<kedf-temperature0>`
+		  - :ref:`kedf-x<kedf-x>`
+		* - :ref:`kedf-y<kedf-y>`
+		  - :ref:`mix-coef<mix-coef>`
+		  - :ref:`mix-delay<mix-delay>`
+		  - :ref:`mix-kf<mix-kf>`
+		* - :ref:`mix-maxm<mix-maxm>`
+		  - :ref:`mix-predcoef<mix-predcoef>`
+		  - :ref:`mix-predecut<mix-predecut>`
+		  - :ref:`mix-predtype<mix-predtype>`
+		* - :ref:`mix-restarted<mix-restarted>`
+		  - :ref:`mix-scheme<mix-scheme>`
+		  -
+		  -
+
+
+.. _SUB:
+
+
+SUB
+--------------------
+
+
+.. list-table::
+
+		* - :ref:`basefile<SUB--basefile>`
+		  - :ref:`calculator<SUB--calculator>`
+		  - :ref:`cell-cut<cell-cut>`
+		  - :ref:`cell-elename<cell-elename>`
+		* - :ref:`cell-file<cell-file>`
+		  - :ref:`cell-format<cell-format>`
+		  - :ref:`cell-index<cell-index>`
+		  - :ref:`cell-split<cell-split>`
+		* - :ref:`cell-zval<cell-zval>`
+		  - :ref:`decompose-adaptive<decompose-adaptive>`
+		  - :ref:`decompose-method<decompose-method>`
+		  - :ref:`decompose-radius<decompose-radius>`
+		* - :ref:`decompose-rcut<decompose-rcut>`
+		  - :ref:`density-atomic<density-atomic>`
+		  - :ref:`density-file<density-file>`
+		  - :ref:`density-gaussians_rcut<density-gaussians_rcut>`
+		* - :ref:`density-gaussians_scale<density-gaussians_scale>`
+		  - :ref:`density-gaussians_sigma<density-gaussians_sigma>`
+		  - :ref:`density-initial<density-initial>`
+		  - :ref:`density-ncharge<density-ncharge>`
+		* - :ref:`density-output<density-output>`
+		  - :ref:`density-use_gaussians<density-use_gaussians>`
+		  - :ref:`embed<SUB--embed>`
+		  - :ref:`embedpot<SUB--embedpot>`
+		* - :ref:`exc-libxc<exc-libxc>`
+		  - :ref:`exc-xc<exc-xc>`
+		  - :ref:`grid-cplx<grid-cplx>`
+		  - :ref:`grid-ecut<grid-ecut>`
+		* - :ref:`grid-gfull<grid-gfull>`
+		  - :ref:`grid-maxprime<grid-maxprime>`
+		  - :ref:`grid-nr<grid-nr>`
+		  - :ref:`grid-optfft<grid-optfft>`
+		* - :ref:`grid-scale<grid-scale>`
+		  - :ref:`grid-spacing<grid-spacing>`
+		  - :ref:`kedf-alpha<kedf-alpha>`
+		  - :ref:`kedf-beta<kedf-beta>`
+		* - :ref:`kedf-delta<kedf-delta>`
+		  - :ref:`kedf-etamax<kedf-etamax>`
+		  - :ref:`kedf-interp<kedf-interp>`
+		  - :ref:`kedf-k_str<kedf-k_str>`
+		* - :ref:`kedf-kdd<kedf-kdd>`
+		  - :ref:`kedf-kedf<kedf-kedf>`
+		  - :ref:`kedf-kerneltype<kedf-kerneltype>`
+		  - :ref:`kedf-kfmax<kedf-kfmax>`
+		* - :ref:`kedf-kfmin<kedf-kfmin>`
+		  - :ref:`kedf-ldw<kedf-ldw>`
+		  - :ref:`kedf-lumpfactor<kedf-lumpfactor>`
+		  - :ref:`kedf-maxpoints<kedf-maxpoints>`
+		* - :ref:`kedf-neta<kedf-neta>`
+		  - :ref:`kedf-nsp<kedf-nsp>`
+		  - :ref:`kedf-order<kedf-order>`
+		  - :ref:`kedf-params<kedf-params>`
+		* - :ref:`kedf-ratio<kedf-ratio>`
+		  - :ref:`kedf-rho0<kedf-rho0>`
+		  - :ref:`kedf-rhomax<kedf-rhomax>`
+		  - :ref:`kedf-sigma<kedf-sigma>`
+		* - :ref:`kedf-symmetrization<kedf-symmetrization>`
+		  - :ref:`kedf-temperature<kedf-temperature>`
+		  - :ref:`kedf-temperature0<kedf-temperature0>`
+		  - :ref:`kedf-x<kedf-x>`
+		* - :ref:`kedf-y<kedf-y>`
+		  - :ref:`kpoints-grid<kpoints-grid>`
+		  - :ref:`kpoints-method<kpoints-method>`
+		  - :ref:`kpoints-offset<kpoints-offset>`
+		* - :ref:`mix-coef<mix-coef>`
+		  - :ref:`mix-delay<mix-delay>`
+		  - :ref:`mix-kf<mix-kf>`
+		  - :ref:`mix-maxm<mix-maxm>`
+		* - :ref:`mix-predcoef<mix-predcoef>`
+		  - :ref:`mix-predecut<mix-predecut>`
+		  - :ref:`mix-predtype<mix-predtype>`
+		  - :ref:`mix-restarted<mix-restarted>`
+		* - :ref:`mix-scheme<mix-scheme>`
+		  - :ref:`nprocs<SUB--nprocs>`
+		  - :ref:`opt-algorithm<opt-algorithm>`
+		  - :ref:`opt-c1<opt-c1>`
+		* - :ref:`opt-c2<opt-c2>`
+		  - :ref:`opt-econv<opt-econv>`
+		  - :ref:`opt-h0<opt-h0>`
+		  - :ref:`opt-maxfun<opt-maxfun>`
+		* - :ref:`opt-maxiter<opt-maxiter>`
+		  - :ref:`opt-maxls<opt-maxls>`
+		  - :ref:`opt-method<opt-method>`
+		  - :ref:`opt-update_delay<opt-update_delay>`
+		* - :ref:`opt-update_freq<opt-update_freq>`
+		  - :ref:`opt-update_sleep<opt-update_sleep>`
+		  - :ref:`opt-vector<opt-vector>`
+		  - :ref:`opt-xtol<opt-xtol>`
+		* - :ref:`prefix<SUB--prefix>`
+		  - :ref:`task<SUB--task>`
+		  - :ref:`technique<SUB--technique>`
+		  -
+
+
+cell
+^^^^^^^^^^^^^^^^^^^^
+
+	Structure information of system.
+
+
+.. list-table::
+
+		* - :ref:`cell-cut<cell-cut>`
+		  - :ref:`cell-elename<cell-elename>`
+		  - :ref:`cell-file<cell-file>`
+		  - :ref:`cell-format<cell-format>`
+		* - :ref:`cell-index<cell-index>`
+		  - :ref:`cell-lattice<cell-lattice>`
+		  - :ref:`cell-numbers<cell-numbers>`
+		  - :ref:`cell-positions<cell-positions>`
+		* - :ref:`cell-scaled_positions<cell-scaled_positions>`
+		  - :ref:`cell-split<cell-split>`
+		  - :ref:`cell-symbols<cell-symbols>`
+		  - :ref:`cell-zval<cell-zval>`
+
+
+.. _cell-file:
+
+**cell-file**
+	The file name of input structure. Many file formats are available. We use `ASE's I/O <https://wiki.fysik.dtu.dk/ase/ase/io/io.html#module-ase.io>`_ for some formats.
+
+	- *Options* : 
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+
+.. _cell-split:
+
+**cell-split**
+	Cut small cell for each direction (scaled).
+
+	- *Options* : 
+
+	- *Default* : None
+
+
+.. _cell-cut:
+
+**cell-cut**
+	Base on the subsystem atoms build the small cell, and add the vacuum on each direction. 0 means use whole cell.
+
+	- *Options* : 
+
+	- *Default* : 0
+
+
+.. _cell-index:
+
+**cell-index**
+	The indices of the atoms, support integer and slice.
+
+	- *Options* : 
+
+	- *Default* : :
+
+.. note::
+ If not only a slice, you should given the stop for the slice.
+
+.. _cell-elename:
+
+**cell-elename**
+	The name of atom.
+
+	- *Options* : 
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+
+.. _cell-zval:
+
+**cell-zval**
+	The charge of atomic species.
+
+	- *Options* : 
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+
+.. _cell-format:
+
+**cell-format**
+	The format of structure file.
+
+	- *Options* : pp, vasp, xsf, snpy, ...
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+.. note::
+ Only `snpy` format support parallel read and write
+
+.. _cell-lattice:
+
+**cell-lattice**
+	Three numbers means three lengths of orthogonal cell; Six numbers means three vector lengths and three angles; Nine numbers means unit vector[a, b, c]. Only works for :ref:`GSYSTEM<GSYSTEM>` and when :ref:`cell-file<cell-file>` is not given.
+
+	- *Options* : 
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+
+.. _cell-symbols:
+
+**cell-symbols**
+	A list of symbols for all atoms. Only works for :ref:`GSYSTEM<GSYSTEM>` and when :ref:`cell-file<cell-file>` is not given.
+
+	- *Options* : 
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+
+.. _cell-positions:
+
+**cell-positions**
+	Atomic positions in Cartesian coordinate. Only works for :ref:`GSYSTEM<GSYSTEM>` and when :ref:`cell-file<cell-file>` is not given.
+
+	- *Options* : 
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+	- *Unit* : Angstrom
+
+
+.. _cell-scaled_positions:
+
+**cell-scaled_positions**
+	Atomic positions in crystal coordinate. Only works for :ref:`GSYSTEM<GSYSTEM>` and when :ref:`cell-file<cell-file>` is not given.
+
+	- *Options* : 
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+
+.. _cell-numbers:
+
+**cell-numbers**
+	Atomic number for all atoms. Only works for :ref:`GSYSTEM<GSYSTEM>` and when :ref:`cell-file<cell-file>` is not given.
+
+	- *Options* : 
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+
+grid
+^^^^^^^^^^^^^^^^^^^^
+
+	Control the grid.
+
+
+.. list-table::
+
+		* - :ref:`grid-cplx<grid-cplx>`
+		  - :ref:`grid-ecut<grid-ecut>`
+		  - :ref:`grid-gfull<grid-gfull>`
+		  - :ref:`grid-maxprime<grid-maxprime>`
+		* - :ref:`grid-nr<grid-nr>`
+		  - :ref:`grid-optfft<grid-optfft>`
+		  - :ref:`grid-scale<grid-scale>`
+		  - :ref:`grid-spacing<grid-spacing>`
+
+
+.. _grid-ecut:
+
+**grid-ecut**
+	The kinetic energy cutoff.
+
+	- *Options* : 
+
+	- *Default* : 600 (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+	- *Unit* : eV
+
+
+.. _grid-optfft:
+
+**grid-optfft**
+	Optimize the number of grid points.
+
+	- *Options* : True, False
+
+	- *Default* : True (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : True (:ref:`SUB<sub>`)
+
+
+.. _grid-spacing:
+
+**grid-spacing**
+	The spacing (or gap) separating nearest real space grid points. If set this, :ref:`ecut<grid-ecut>` is disabled.
+
+	- *Options* : 
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+	- *Unit* : Angstrom
+
+
+.. _grid-gfull:
+
+**grid-gfull**
+	Determines oif the number of grid points in the reciprocal and real space grids are equal. If '`False`' only use half grid, which will be faster.
+
+	- *Options* : True, False
+
+	- *Default* : False (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : False (:ref:`SUB<sub>`)
+
+.. note::
+ `gfull=False`' implies that the the number of points of reciprocal space is only half of real space.
+
+.. _grid-nr:
+
+**grid-nr**
+	The number of grid points in the direction of the three lattice vectors.
+
+	- *Options* : 
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+	- *e.g.* : 
+
+			nr = 32 32 32
+
+.. _grid-maxprime:
+
+**grid-maxprime**
+	The max prime of guess best number of grid points for FFT
+
+	- *Options* : 3, 5, 7, 11, 13, 17,..., 97
+
+	- *Default* : 13 (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : 13 (:ref:`SUB<sub>`)
+
+
+.. _grid-scale:
+
+**grid-scale**
+	The minimum scale for guess the best number of grid points
+
+	- *Options* : 
+
+	- *Default* : 0.99 (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : 0.99 (:ref:`SUB<sub>`)
+
+
+.. _grid-cplx:
+
+**grid-cplx**
+	The type of real space value
+
+	- *Options* : True, False
+
+	- *Default* : False (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : False (:ref:`SUB<sub>`)
+
+
+density
+^^^^^^^^^^^^^^^^^^^^
+
+	Control the charge density.
+
+
+.. list-table::
+
+		* - :ref:`density-atomic<density-atomic>`
+		  - :ref:`density-file<density-file>`
+		  - :ref:`density-gaussians_rcut<density-gaussians_rcut>`
+		  - :ref:`density-gaussians_scale<density-gaussians_scale>`
+		* - :ref:`density-gaussians_sigma<density-gaussians_sigma>`
+		  - :ref:`density-initial<density-initial>`
+		  - :ref:`density-ncharge<density-ncharge>`
+		  - :ref:`density-output<density-output>`
+		* - :ref:`density-use_gaussians<density-use_gaussians>`
+		  -
+		  -
+		  -
+
+
+.. _density-ncharge:
+
+**density-ncharge**
+	Total charge of the system.
+
+	- *Options* : 
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+
+.. _density-file:
+
+**density-file**
+	The input density file for initial density. If set, the :ref:`density-initial<density-initial>` will automatically set to 'file'.
+
+	- *Options* : 
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+
+.. _density-output:
+
+**density-output**
+	The output file or format of density. The name starts with '.' represent the format.
+
+	- *Options* : 
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+
+.. _density-initial:
+
+**density-initial**
+	Default is None, which means engines determine the initial density by themself. 'temp' means initial density from engine temporary output. 'atomic' means base on the atomic density files or pseudopotentials initialize the density. 'file' means use input density file :ref:`density-file<density-file>` to initialize the density.
+
+	- *Options* : None, heg, temp, atomic, file
+
+	- *Default* : None
+
+
+.. _density-atomic:
+
+**density-atomic**
+	If :ref:`density-initial<density-initial>` set the Atomic, here can set each elements atomic density.
+
+	- *Options* : 
+
+	- *Default* : {}
+
+
+.. _density-use_gaussians:
+
+**density-use_gaussians**
+	 It will replaces the core densities of the surrounding fragments with a gaussian. This is to avoid problems of electrons leaking in the core region of surrounding fragments when hard pseudopotentials are employed.
+
+	- *Options* : True, False
+
+	- *Default* : False
+
+
+.. _density-gaussians_rcut:
+
+**density-gaussians_rcut**
+	The cutoff of distance.
+
+	- *Options* : 
+
+	- *Default* : 3
+
+	- *Unit* : Angstrom
+
+
+.. _density-gaussians_sigma:
+
+**density-gaussians_sigma**
+	The sigma of gaussians.
+
+	- *Options* : 
+
+	- *Default* : 0.3
+
+
+.. _density-gaussians_scale:
+
+**density-gaussians_scale**
+	The scale of each elements. If not set, will use the number of core electrons.
+
+	- *Options* : 
+
+	- *Default* : {}
+
+
+exc
+^^^^^^^^^^^^^^^^^^^^
+
+	Control the exchange-correlation functional.
+
+
+.. list-table::
+
+		* - :ref:`exc-c_str<exc-c_str>`
+		  - :ref:`exc-dftd4<exc-dftd4>`
+		  - :ref:`exc-libxc<exc-libxc>`
+		  - :ref:`exc-x_str<exc-x_str>`
+		* - :ref:`exc-xc<exc-xc>`
+		  -
+		  -
+		  -
+
+
+.. _exc-libxc:
+
+**exc-libxc**
+	The type of exchange-correlation functionals with pylibxc_. See `available functionals <https://www.tddft.org/programs/libxc/functionals/>`_.
+
+	- *Options* : 
+
+	- *Default* : gga_x_pbe  gga_c_pbe (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+
+.. _exc-xc:
+
+**exc-xc**
+	The kind of exchange-correlation functional. If not `LDA`, must have pylibxc_ installed. It has higher priority than :ref:`libxc<exc-libxc>`
+
+	- *Options* : LDA, PBE
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+
+.. _exc-dftd4:
+
+**exc-dftd4**
+	The method of dftd4_. If use it, the dftd4_ should be installed. See `dftd4's available methods <https://github.com/dftd4/dftd4/blob/main/assets/parameters.toml>`_.
+
+	- *Options* : 
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+.. note::
+ If dftd4='same', which means dftd4 use same functional as exchange-correlation.
+
+.. _exc-x_str:
+
+**exc-x_str**
+	See `libxc's available exchange functionals <https://www.tddft.org/programs/libxc/functionals/>`_ (deprecated).
+
+	- *Options* : 
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+
+.. _exc-c_str:
+
+**exc-c_str**
+	See `libxc's available correlation functionals <https://www.tddft.org/programs/libxc/functionals/>`_ (deprecated).
+
+	- *Options* : 
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+
+kedf
+^^^^^^^^^^^^^^^^^^^^
+
+	Control the kinetic energy density functional (KEDF). DFTpy features most KEDFs, from GGAs to nonlocal to nonlocal with density dependent kernel.
+
+
+.. list-table::
+
+		* - :ref:`kedf-alpha<kedf-alpha>`
+		  - :ref:`kedf-beta<kedf-beta>`
+		  - :ref:`kedf-delta<kedf-delta>`
+		  - :ref:`kedf-etamax<kedf-etamax>`
+		* - :ref:`kedf-interp<kedf-interp>`
+		  - :ref:`kedf-k_str<kedf-k_str>`
+		  - :ref:`kedf-kdd<kedf-kdd>`
+		  - :ref:`kedf-kedf<kedf-kedf>`
+		* - :ref:`kedf-kerneltype<kedf-kerneltype>`
+		  - :ref:`kedf-kfmax<kedf-kfmax>`
+		  - :ref:`kedf-kfmin<kedf-kfmin>`
+		  - :ref:`kedf-ldw<kedf-ldw>`
+		* - :ref:`kedf-lumpfactor<kedf-lumpfactor>`
+		  - :ref:`kedf-maxpoints<kedf-maxpoints>`
+		  - :ref:`kedf-neta<kedf-neta>`
+		  - :ref:`kedf-nsp<kedf-nsp>`
+		* - :ref:`kedf-order<kedf-order>`
+		  - :ref:`kedf-params<kedf-params>`
+		  - :ref:`kedf-ratio<kedf-ratio>`
+		  - :ref:`kedf-rho0<kedf-rho0>`
+		* - :ref:`kedf-rhomax<kedf-rhomax>`
+		  - :ref:`kedf-sigma<kedf-sigma>`
+		  - :ref:`kedf-symmetrization<kedf-symmetrization>`
+		  - :ref:`kedf-temperature<kedf-temperature>`
+		* - :ref:`kedf-temperature0<kedf-temperature0>`
+		  - :ref:`kedf-x<kedf-x>`
+		  - :ref:`kedf-y<kedf-y>`
+		  -
+
+
+.. _kedf-kedf:
+
+**kedf-kedf**
+	The type of KEDF. GGA functionals are available with keywords GGA and LIBXC.
+
+	- *Options* : TF, GGA, LIBXC, vW, TFvW, WT, SM, FP, MGP, MGPA, MGPG, LMGP, LMGPA, LMGPG
+
+	- *Default* : GGA_REVAPBEK (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : WT (:ref:`SUB<sub>`)
+
+
+.. _kedf-x:
+
+**kedf-x**
+	The ratio of TF KEDF.
+
+	- *Options* : 
+
+	- *Default* : 1 (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : 1 (:ref:`SUB<sub>`)
+
+
+.. _kedf-y:
+
+**kedf-y**
+	The ratio of vW KEDF.
+
+	- *Options* : 
+
+	- *Default* : 1 (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : 1 (:ref:`SUB<sub>`)
+
+
+.. _kedf-alpha:
+
+**kedf-alpha**
+	The alpha parameter typical in  nonlocal KEDF :math:`\rho^{\alpha}`.
+
+	- *Options* : 
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+
+.. _kedf-beta:
+
+**kedf-beta**
+	The beta parameter typical in  nonlocal KEDF :math:`\rho^{\beta}`.
+
+	- *Options* : 
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+
+.. _kedf-sigma:
+
+**kedf-sigma**
+	A parameter used to smooth with a Gaussian convolution FFTs of problematic functions (e.g., invfft of :math:`{G^2\rho(G)}` ).
+
+	- *Options* : 
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+
+.. _kedf-nsp:
+
+**kedf-nsp**
+	The number of :math:`{k_{f}}` points for splining `LWT` like nonlocal KEDFs. There are three options to achieve the same goal, the priority is :ref:`nsp<kedf-nsp>` -> :ref:`delta<kedf-delta>` -> :ref:`ratio<kedf-ratio>`. Default is using :ref:`ratio<kedf-ratio>`.
+
+	- *Options* : 
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+
+.. _kedf-interp:
+
+**kedf-interp**
+	The interpolation method for `LWT` KEDF's kernel from the kernel table.
+
+	- *Options* : linear, newton, hermite
+
+	- *Default* : linear (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : hermite (:ref:`SUB<sub>`)
+
+
+.. _kedf-kerneltype:
+
+**kedf-kerneltype**
+	The kernel for `LWT` KEDF.
+
+	- *Options* : WT, MGP, MGPA, MGPG, HC
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+
+.. _kedf-symmetrization:
+
+**kedf-symmetrization**
+	The symmetrization way for `MGP` KEDF. See `MGP_paper <https://aip.scitation.org/doi/abs/10.1063/1.5023926>`_.
+
+	- *Options* : None, Arithmetic, Geometric
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+
+.. _kedf-lumpfactor:
+
+**kedf-lumpfactor**
+	The kinetic electron for `LWT` KEDF.
+
+	- *Options* : 
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+
+.. _kedf-neta:
+
+**kedf-neta**
+	The max number of discrete :math:`\eta` for `LWT` KEDF.
+
+	- *Options* : 
+
+	- *Default* : 50000 (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : 50000 (:ref:`SUB<sub>`)
+
+
+.. _kedf-etamax:
+
+**kedf-etamax**
+	The max value of \eta for kernel in `LWT` KEDF.
+
+	- *Options* : 
+
+	- *Default* : 50 (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : 50 (:ref:`SUB<sub>`)
+
+
+.. _kedf-order:
+
+**kedf-order**
+	The order for the interpolation of the kernel in `LWT` KEDF. '0' means using the value of nearest-neighbor point is used.
+
+	- *Options* : 1, 2, 3, 4, 5
+
+	- *Default* : 3 (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : 3 (:ref:`SUB<sub>`)
+
+
+.. _kedf-ratio:
+
+**kedf-ratio**
+	The ratio of :math:`{k_{f}}` for spline in `LWT` KEDF. There are three options to do same thing, the priority is :ref:`nsp<kedf-nsp>` -> :ref:`delta<kedf-delta>` -> :ref:`ratio<kedf-ratio>`. Default is using :ref:`ratio<kedf-ratio>`.
+
+	- *Options* : 
+
+	- *Default* : 1.15 (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : 1.15 (:ref:`SUB<sub>`)
+
+
+.. _kedf-maxpoints:
+
+**kedf-maxpoints**
+	The max number of integration points for the evaluation of the `MGP` kernel.
+
+	- *Options* : 
+
+	- *Default* : 1000 (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : 1000 (:ref:`SUB<sub>`)
+
+
+.. _kedf-delta:
+
+**kedf-delta**
+	The gap of spline
+
+	- *Options* : 
+
+	- *Default* : 0.3 (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+
+.. _kedf-kdd:
+
+**kedf-kdd**
+	The kernel density dependent for `LWT` KEDF: 
+		+ 1 : The origin `LWT` KEDF. 
+		+ 2 : Considers the :math:`\rho^{\beta}(r')\omega(\rho(r),r-r')` term in the potential.
+		+ 3 : Also considers the derivative of kernel which is neglected in LWT. See `LMGP_paper <https://journals.aps.org/prb/abstract/10.1103/PhysRevB.100.041105>`_.  
+
+	- *Options* : 1, 2, 3
+
+	- *Default* : 1 (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : 3 (:ref:`SUB<sub>`)
+
+
+.. _kedf-rho0:
+
+**kedf-rho0**
+	The 'average' density used for the definition of the Fermi momentum. Default is None, which means it calculated based on the total charge and system volume.
+
+	- *Options* : 
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+
+.. _kedf-k_str:
+
+**kedf-k_str**
+	Functional type for GGA/LIBXC
+
+	- *Options* : LKT, DK, LLP, LLP91, OL1, OL, OL2, T92, THAK, B86A, B86, B86B, DK87, PW86, PW91O, PW91, PW91k, LG94, E00, P92, PBE2, PBE3, PBE4, P82, TW02, APBE, APBEK, REVAPBEK, REVAPBE, VJKS00, LC94, VT84F, SMP, TF, VW, X_TF_Y_VW, TFVW, STV, PBE2M, PG
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+.. warning::
+ GGA invokes DFTpy's implementation. LIBXC invokes libxc's implementation (discouraged).
+
+.. _kedf-params:
+
+**kedf-params**
+	Parameters for GGA KEDF functionals
+
+	- *Options* : 
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+
+.. _kedf-kfmin:
+
+**kedf-kfmin**
+	Lower limit of kf
+
+	- *Options* : 
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+
+.. _kedf-kfmax:
+
+**kedf-kfmax**
+	Upper limit of kf
+
+	- *Options* : 
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+
+.. _kedf-rhomax:
+
+**kedf-rhomax**
+	Maximum/cutoff density
+
+	- *Options* : 
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+
+.. _kedf-ldw:
+
+**kedf-ldw**
+	local density weight
+
+	- *Options* : 
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+
+.. _kedf-temperature:
+
+**kedf-temperature**
+	The temperature of TF KEDF.
+
+	- *Options* : 
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+	- *Unit* : eV
+
+
+.. _kedf-temperature0:
+
+**kedf-temperature0**
+	The temperature of TF KEDF (analytical approximation).
+
+	- *Options* : 
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+	- *Unit* : eV
+
+
+decompose
+^^^^^^^^^^^^^^^^^^^^
+
+	The way to decompose the subsystem to more subsystems
+
+
+.. list-table::
+
+		* - :ref:`decompose-adaptive<decompose-adaptive>`
+		  - :ref:`decompose-method<decompose-method>`
+		  - :ref:`decompose-radius<decompose-radius>`
+		  - :ref:`decompose-rcut<decompose-rcut>`
+		* - :ref:`decompose-rtol<decompose-rtol>`
+		  -
+		  -
+		  -
+
+
+.. _decompose-method:
+
+**decompose-method**
+	'manual' means use the given subsystem; 'distance' means base on the distance of atoms to decompose the subsystem.
+
+	- *Options* : manual, distance
+
+	- *Default* : manual (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : manual (:ref:`SUB<sub>`)
+
+
+.. _decompose-adaptive:
+
+**decompose-adaptive**
+	The decompose method after first step, 'manual' will remove all 'NSUB'.
+
+	- *Options* : manual, distance
+
+	- *Default* : manual (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : manual (:ref:`SUB<sub>`)
+
+
+.. _decompose-rcut:
+
+**decompose-rcut**
+	The cutoff for decompose the subsystems.
+
+	- *Options* : 
+
+	- *Default* : 3 (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : 3 (:ref:`SUB<sub>`)
+
+	- *Unit* : Angstrom
+
+
+.. _decompose-radius:
+
+**decompose-radius**
+	The radius of each elements for decompose the subsystems.
+
+	- *Options* : 
+
+	- *Default* : {} (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : {} (:ref:`SUB<sub>`)
+
+	- *Unit* : Angstrom
+
+
+.. _decompose-rtol:
+
+**decompose-rtol**
+	The tolerance of distance for adaptive simulation.
+
+	- *Options* : 
+
+	- *Default* : 0.0 (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : 0.0 (:ref:`SUB<sub>`)
+
+	- *Unit* : Angstrom
+
+
+mix
+^^^^^^^^^^^^^^^^^^^^
+
+	Control the charge density mixing.
+
+
+.. list-table::
+
+		* - :ref:`mix-coef<mix-coef>`
+		  - :ref:`mix-delay<mix-delay>`
+		  - :ref:`mix-kf<mix-kf>`
+		  - :ref:`mix-maxm<mix-maxm>`
+		* - :ref:`mix-predcoef<mix-predcoef>`
+		  - :ref:`mix-predecut<mix-predecut>`
+		  - :ref:`mix-predtype<mix-predtype>`
+		  - :ref:`mix-restarted<mix-restarted>`
+		* - :ref:`mix-scheme<mix-scheme>`
+		  -
+		  -
+		  -
+
+
+.. _mix-scheme:
+
+**mix-scheme**
+	Density mixing scheme.
+
+	- *Options* : pulay, linear
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+
+.. _mix-predtype:
+
+**mix-predtype**
+	The preconditioning method.
+
+	- *Options* : kerker, inverse_kerker, resta
+
+	- *Default* : kerker (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : kerker (:ref:`SUB<sub>`)
+
+
+.. _mix-predcoef:
+
+**mix-predcoef**
+	The parameters for preconditioning.
+
+	- *Options* : 
+
+	- *Default* : 1.0 1.0 1.0 (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : 1.0 1.0 1.0 (:ref:`SUB<sub>`)
+
+
+.. _mix-predecut:
+
+**mix-predecut**
+	The preconditioning energy cutoff.
+
+	- *Options* : 
+
+	- *Default* : None (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : None (:ref:`SUB<sub>`)
+
+	- *Unit* : eV
+
+
+.. _mix-maxm:
+
+**mix-maxm**
+	Maximum of iterations used for mixing.
+
+	- *Options* : 
+
+	- *Default* : 7 (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : 7 (:ref:`SUB<sub>`)
+
+
+.. _mix-coef:
+
+**mix-coef**
+
+	- *Options* : The mixing parameter.
+
+	- *Default* : 0.7 (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : 0.7 (:ref:`SUB<sub>`)
+
+
+.. _mix-delay:
+
+**mix-delay**
+	Delay several step to mixing the density.
+
+	- *Options* : 
+
+	- *Default* : 2 (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : 2 (:ref:`SUB<sub>`)
+
+
+.. _mix-restarted:
+
+**mix-restarted**
+	Restart the mixer after several step.
+
+	- *Options* : True, False
+
+	- *Default* : False (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : False (:ref:`SUB<sub>`)
+
+
+.. _mix-kf:
+
+**mix-kf**
+	Similar as predcoef, not use now.
+
+	- *Options* : 
+
+	- *Default* : auto (:ref:`GSYSTEM<gsystem>`)
+
+	- *Default* : auto (:ref:`SUB<sub>`)
+
+
+opt
+^^^^^^^^^^^^^^^^^^^^
+
+	Control the charge density optimization for subsystem.
+
+
+.. list-table::
+
+		* - :ref:`opt-algorithm<opt-algorithm>`
+		  - :ref:`opt-c1<opt-c1>`
+		  - :ref:`opt-c2<opt-c2>`
+		  - :ref:`opt-econv<opt-econv>`
+		* - :ref:`opt-h0<opt-h0>`
+		  - :ref:`opt-maxfun<opt-maxfun>`
+		  - :ref:`opt-maxiter<opt-maxiter>`
+		  - :ref:`opt-maxls<opt-maxls>`
+		* - :ref:`opt-method<opt-method>`
+		  - :ref:`opt-update_delay<opt-update_delay>`
+		  - :ref:`opt-update_freq<opt-update_freq>`
+		  - :ref:`opt-update_sleep<opt-update_sleep>`
+		* - :ref:`opt-vector<opt-vector>`
+		  - :ref:`opt-xtol<opt-xtol>`
+		  -
+		  -
+
+
+.. _opt-maxiter:
+
+**opt-maxiter**
+	The max steps for optimization
+
+	- *Options* : 
+
+	- *Default* : 800
+
+
+.. _opt-update_sleep:
+
+**opt-update_sleep**
+	Subsystem will wait several steps then update.
+
+	- *Options* : 
+
+	- *Default* : 0
+
+
+.. _opt-update_delay:
+
+**opt-update_delay**
+	Delay several steps to evaluate the update frequency.
+
+	- *Options* : 
+
+	- *Default* : 0
+
+
+.. _opt-update_freq:
+
+**opt-update_freq**
+	The update frequency of subsystem.
+
+	- *Options* : 
+
+	- *Default* : 1
+
+
+.. _opt-method:
+
+**opt-method**
+	The density optimization method.
+
+	- *Options* : TN, LBFGS, CG-HS, CG-DY, CG-CD, CG-LS, CG-FR, CG-PR
+
+	- *Default* : CG-HS
+
+
+.. _opt-algorithm:
+
+**opt-algorithm**
+	Direct energy minimization method (EMM), direct residual minimization method (RMM), and one-orbital ensemble self-consistent field (`OESCF <https://pubs.acs.org/doi/full/10.1021/acs.jpclett.1c00716>`_).
+
+	- *Options* : EMM, RMM, OESCF
+
+	- *Default* : EMM
+
+.. note::
+ In `OESCF` solver, the :ref:`kedf<kedf-kedf>` has to contains full `vW` functional.
+
+.. _opt-vector:
+
+**opt-vector**
+	The scheme to deal with search direction.
+
+	- *Options* : Orthogonalization, Scaling
+
+	- *Default* : Orthogonalization
+
+
+.. _opt-c1:
+
+**opt-c1**
+	The wolfe parameters `c1`
+
+	- *Options* : 
+
+	- *Default* : 0.0001
+
+
+.. _opt-c2:
+
+**opt-c2**
+	The wolfe parameters `c2`
+
+	- *Options* : 
+
+	- *Default* : 0.2
+
+
+.. _opt-maxls:
+
+**opt-maxls**
+	The max steps for line search. 
+
+	- *Options* : 
+
+	- *Default* : 10
+
+
+.. _opt-econv:
+
+**opt-econv**
+	The energy convergence for last three steps (a.u./atom).
+
+	- *Options* : 
+
+	- *Default* : 1e-06
+
+	- *Unit* : a.u./atom
+
+
+.. _opt-maxfun:
+
+**opt-maxfun**
+	The max steps for function calls. For `TN` density optimization method its the max steps for searching direction.
+
+	- *Options* : 
+
+	- *Default* : 50
+
+
+.. _opt-xtol:
+
+**opt-xtol**
+	Relative tolerance for an acceptable step.
+
+	- *Options* : 
+
+	- *Default* : 1e-12
+
+
+.. _opt-h0:
+
+**opt-h0**
+	The initial approximation for the inverse Hessian needed by `LBFGS`.
+
+	- *Options* : 
+
+	- *Default* : 1
+
+
+kpoints
+^^^^^^^^^^^^^^^^^^^^
+
+	Set the kpoints for subsystem.
+
+
+.. list-table::
+
+		* - :ref:`kpoints-grid<kpoints-grid>`
+		  - :ref:`kpoints-method<kpoints-method>`
+		  - :ref:`kpoints-offset<kpoints-offset>`
+
+
+.. _kpoints-method:
+
+**kpoints-method**
+	The method for generate the kpoints.
+
+	- *Options* : 
+
+	- *Default* : auto
+
+
+.. _kpoints-grid:
+
+**kpoints-grid**
+	The grid of kpoints.
+
+	- *Options* : 
+
+	- *Default* : None
+
+
+.. _kpoints-offset:
+
+**kpoints-offset**
+	The offset of kpoints.
+
+	- *Options* : 
+
+	- *Default* : None
+
+
+.. _SUB--calculator:
+
+**calculator**
+	The SCF driver of subsystem.
+
+	- *Options* : dftpy, castep, qe
+
+	- *Default* : dftpy
+
+
+.. _SUB--technique:
+
+**technique**
+	The technique (OF|KS) of the driver.
+
+	- *Options* : 
+
+	- *Default* : OF
+
+
+.. _SUB--nprocs:
+
+**nprocs**
+	The number of processors for the subsystem.
+
+	- *Options* : 
+
+	- *Default* : 1
+
+.. note::
+ If the minimum of all subsystems is 1, can also be used as ratio of number of processors for each subsystem.
+
+.. _SUB--embed:
+
+**embed**
+	The embedding potential.
+
+	- *Options* : KE XC HARTREE PSEUDO
+
+	- *Default* : KE
+
+
+.. _SUB--embedpot:
+
+**embedpot**
+	The output file or format of embedding potential. The name starts with '.' represent the format.
+
+	- *Options* : 
+
+	- *Default* : None
+
+
+.. _SUB--basefile:
+
+**basefile**
+	The base input file for subsystem.
+
+	- *Options* : 
+
+	- *Default* : None
+
+
+.. _SUB--prefix:
+
+**prefix**
+	The prefix of each subsystem. If not set, it's same as the name of subsystem.
+
+	- *Options* : 
+
+	- *Default* : None
+
+
+.. _SUB--task:
+
+**task**
+	The task to be performed for subsystem. Only works for JOB-task = Optmix.
+
+	- *Options* : scf, optical
+
+	- *Default* : None
+
+
+.. _MOL:
+
+
+MOL
+--------------------
+
+	The information of molecules.
+
+
+.. list-table::
+
+		* - :ref:`charge<MOL--charge>`
+		  - :ref:`magmom<MOL--magmom>`
+
+
+.. _MOL--charge:
+
+**charge**
+	The charge of molecules or atoms.
+
+	- *Options* : 
+
+	- *Default* : {}
+
+
+.. _MOL--magmom:
+
+**magmom**
+	The magnetic moment of molecules or atoms.
+
+	- *Options* : 
+
+	- *Default* : {}
+

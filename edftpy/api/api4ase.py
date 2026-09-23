@@ -3,9 +3,9 @@ import numpy as np
 from dftpy.constants import ENERGY_CONV, FORCE_CONV, STRESS_CONV
 import ase
 
-from edftpy.io import ase2ions
 from edftpy.interface import config2optimizer
 from edftpy.mpi import sprint
+from dftpy.ions import  Ions
 
 class eDFTpyCalculator(object):
     """eDFTpy calculator for ase"""
@@ -38,7 +38,7 @@ class eDFTpyCalculator(object):
 
     def update_optimizer(self, atoms = None):
         atoms = atoms or self.atoms
-        ions = ase2ions(atoms)
+        ions = Ions.from_ase(atoms)
         if self.iter > 1 :
             append = True
         else :

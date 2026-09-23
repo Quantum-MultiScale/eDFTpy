@@ -1,11 +1,10 @@
 import numpy as np
 from ase.neighborlist import neighbor_list
 
-from edftpy.io import ions2ase
 from edftpy.utils.math import union_mlist
 
 def from_distance_to_sub(ions, cutoff = 3, max_nbins=1e6, **kwargs):
-    atoms = ions2ase(ions)
+    atoms = ions.to_ase()
     nat = atoms.get_global_number_of_atoms()
     inda, indb = neighbor_list('ij', atoms, cutoff, self_interaction=True, max_nbins=max_nbins)
     subcells = []

@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Step by Step Installation guide &mdash; eDFTpy 0.0.1 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+      <link rel="stylesheet" href="_static/graphviz.css" type="text/css" />
+      <link rel="stylesheet" href="_static/panels-main.c949a650a448cc0ae9fd3441c0e17fb0.css" type="text/css" />
+      <link rel="stylesheet" href="_static/panels-bootstrap.5fd3999ee7762ccc51105388f4a9d115.css" type="text/css" />
+      <link rel="stylesheet" href="_static/panels-variables.06eb56fa6e07937060861dad626602ad.css" type="text/css" />
+    <link rel="shortcut icon" href="_static/edftpy.ico"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #bdc3c7" >
+            <a href="index.html">
+            <img src="_static/edftpy.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="contact.html">Contact</a></li>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/tutorials.html">Tutorials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cmdline.html">Command lines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="releases.html">Stable releases</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently Asked Questions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #bdc3c7" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">eDFTpy</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Step by Step Installation guide</li>
+      <li class="wy-breadcrumbs-aside">
+        
+			<a href=genindex.html>Index</a>
+		
+          
+			<a href="https://gitlab.com/pavanello-research-group/edftpy/tree/master/doc/source/stpbystp.rst">Source</a>
+          
+        
+      </li>
+    
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<section id="step-by-step-installation-guide">
+<span id="step-by-step"></span><h1>Step by Step Installation guide<a class="headerlink" href="#step-by-step-installation-guide" title="Permalink to this headline">¶</a></h1>
+<section id="before-starting">
+<h2>Before Starting<a class="headerlink" href="#before-starting" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic">
+<li><p>If you are going to perform the configuration from scratch, we advise carry out a clean intallation in you system, it means deactivate any virtual enviroment in your system (e.g. Anaconda, Miniconda) before performing the installation it will avoid any incompatibility between libraries.</p></li>
+<li><p>Update your linux distribution</p>
+<ul>
+<li><p>Ubuntu/Debian:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ sudo apt-get update &amp;&amp; sudo apt-get upgrade
+</pre></div>
+</div>
+</li>
+<li><p>CentOS/RedHat:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ sudo yum check-update
+$ sudo yum update -y
+</pre></div>
+</div>
+</li>
+</ul>
+</li>
+<li><p>Most of the Unix distributions already includes python packages, before starting you installation you should confirm your python package version. To do this you could type in your shell:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python --version
+</pre></div>
+</div>
+</li>
+<li><p>If you have python version &gt; 3.9 (e.g. 3.10.4 or later) you should install libxc from source due to the imcopatibility with the pip environment in which eDFTpy was created (see step 10 from Ubuntu based systems tutorial).</p></li>
+<li><p>Due to eDFTpy and QEpy packages depends on Quantum Espresso=6.5, you must use gfortran and gcc compilers version &lt;=9.0 (see step 11 from Ubuntu based systems tutorial).</p></li>
+<li><p>If you have python version &gt; 3.9 (e.g. 3.10.4 or later) you should install libxc from source due to the imcopatibility with the pip environment in which eDFTpy was created (see step 10 from Ubuntu based systems tutorial).</p></li>
+</ol>
+</section>
+<section id="ubuntu-or-debian-based-os">
+<h2>Ubuntu or Debian based OS<a class="headerlink" href="#ubuntu-or-debian-based-os" title="Permalink to this headline">¶</a></h2>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This tutorial was developed using Ubuntu 22.04 LTS Desktop distribution.</p>
+</div>
+<section id="prerequisites">
+<h3>Prerequisites<a class="headerlink" href="#prerequisites" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic">
+<li><p>Install a CMake compiler:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ sudo apt-get install cmake
+</pre></div>
+</div>
+</li>
+<li><p>Install Make tool:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ sudo apt-get install make
+</pre></div>
+</div>
+</li>
+<li><p>Install PyPA tool for installing Python packages pip:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ sudo apt install python-pip
+</pre></div>
+</div>
+</li>
+<li><p>Install the distribute version control system Git:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ sudo apt-get install git-all
+</pre></div>
+</div>
+</li>
+<li><p>Install numpy:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pip install numpy
+</pre></div>
+</div>
+</li>
+<li><p>Install the C subroutine library for computing the discrete Fourier transform (DFT) FFTW libraties. We strongly recommend performing the installation using the Linux package provider due to an unexpected incompatibility with the source file libraries installation:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ sudo apt install libfftw3-3 libfftw3-dev
+</pre></div>
+</div>
+</li>
+<li><p>Install gfortran and gcc compilers:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ sudo apt-get install gfortran
+$ sudo apt-get install gcc
+</pre></div>
+</div>
+</li>
+<li><p>Configure your parallel environment using Open MPI, tested version 4.1.4.</p></li>
+</ol>
+<ul>
+<li><p>Go to the Open MPI <a class="reference external" href="https://www.open-mpi.org/">website</a></p></li>
+<li><p>Download the release 4.1.4: Click on openmpi-4.1.4.tar.gz release</p></li>
+<li><p>Go to your Downloads folder:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cd /home/user/Downloads
+</pre></div>
+</div>
+</li>
+<li><p>Uncompress your tar.gz file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ tar -xzvf openmpi-4.1.4.tar.gz
+</pre></div>
+</div>
+</li>
+<li><p>Here you can follow the installation instructions provided in INSTALL file inside of your openmpi-4.1.4 folder</p></li>
+<li><p>Create and environmental variable in your ~/.bascrh adding the next strings:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+</pre></div>
+</div>
+</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This path could change if you performed your Open MPI installation in a different directory than the default one.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>If you compile Open MPI using the default location you should carry out the make command with sudo privileges.</p>
+</div>
+</section>
+<section id="install-packages">
+<h3>Install Packages<a class="headerlink" href="#install-packages" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic simple">
+<li><p>Install Libxc from source. Skip this step if your python version is &lt; 3.10.4</p></li>
+</ol>
+<ul>
+<li><p>Go to <a class="reference external" href="https://tddft.org/programs/libxc/">libxc</a> website</p></li>
+<li><p>Download the libxc-5.2.3.tar.gz release</p></li>
+<li><p>Go to your Downloads folder: cd /home/user/Downloads</p></li>
+<li><p>Uncompress your tar.gz file: tar -xzvf libxc-5.2.3.tar.gz</p></li>
+<li><p>Compile Libxc:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ ./configure
+$ make
+$ make install
+</pre></div>
+</div>
+</li>
+</ul>
+<ol class="arabic" start="2">
+<li><p>Change your gcc and gfortran version from the newest versions to 9.4.0.:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ sudo apt-get install gfortran-9
+$ sudo apt-get install gcc-9
+</pre></div>
+</div>
+</li>
+<li><p>Once you install the version 9 packages the easiest way to perform this change of compilers in your system is creating an alias string in your <cite>~/.basrch</cite>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ alias gcc=&#39;gcc-9&#39;
+$ alias gfortran=&#39;gfortran-9&#39;
+</pre></div>
+</div>
+</li>
+</ol>
+<p>Here DO NOT omit the quotation marks.</p>
+<ol class="arabic" start="4">
+<li><p>Update your system variables:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ source ~/.bashrc
+</pre></div>
+</div>
+</li>
+<li><p>Install Quantum Espresso package</p></li>
+</ol>
+<ul>
+<li><p>Go to <a class="reference external" href="https://gitlab.com/QEF/q-e/-/releases/qe-6.5">Q.E</a>. 6.5 release</p></li>
+<li><p>Download the Source code (<cite>tar.gz</cite>) file</p></li>
+<li><p>Uncompress your tar.gz file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ tar -xzvf q-e-qe-6.5.tar.gz
+</pre></div>
+</div>
+</li>
+<li><p>Go to your Quantum Espresso file: cd q-e-qe-6.5</p></li>
+<li><p>Make the configuration</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>All static libraries should be compiled with the -fPIC compuiler option. Add -fPIC to the configuration options.</p>
+</div>
+<ul>
+<li><p>Parallel environment:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ ./configure  MPIF90=mpif90  --with-scalapack=no -enable-openmp=no -enable-parallel=yes   CFLAGS=-fPIC FFLAGS=-fPIC try_foxflags=-fPIC
+$ make all
+</pre></div>
+</div>
+</li>
+</ul>
+<ol class="arabic" start="6">
+<li><p>Install the eDFTpt package:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ git clone https://gitlab.com/pavanello-research-group/edftpy.git
+$ python -m pip install ./edftpy
+</pre></div>
+</div>
+</li>
+<li><p>Install the QEpy package:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ git clone --recurse-submodules https://gitlab.com/shaoxc/qepy.git
+$ qedir=/full/path/to/your/q-e-qe-6.5/ python -m pip install -U ./qepy
+</pre></div>
+</div>
+</li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>qedir cannot the abreviated, must be the full path to your QE folder.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>If you compile Open MPI using the default location you should carry out the make command with sudo privileges.</p>
+</div>
+</section>
+</section>
+<section id="centos-and-redhat-based-os">
+<h2>CentOS and RedHat based OS<a class="headerlink" href="#centos-and-redhat-based-os" title="Permalink to this headline">¶</a></h2>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This tutorial was developed using CentOS 7 Desktop distribution.</p>
+</div>
+<section id="id1">
+<h3>Prerequisites<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic">
+<li><p>Configure your python3 environment:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ sudo yum install $https://repo.ius.io/ius-release-el$(rpm -E &#39;%{rhel}&#39;).rpm$
+$ sudo yum update -y
+$ sudo yum install -y python3
+$ sudo yum install python3-devel.x86_64
+</pre></div>
+</div>
+</li>
+<li><p>Install a CMake compiler:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ sudo yum install cmake
+</pre></div>
+</div>
+</li>
+<li><p>Install Make tool:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ sudo yum install make
+</pre></div>
+</div>
+</li>
+<li><p>Install PyPA tool for installing Python packages pip:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ sudo yum install epel-release
+$ sudo yum install python3-pip
+</pre></div>
+</div>
+</li>
+<li><p>Install the distribute version control system Git:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ sudo yum install git
+</pre></div>
+</div>
+</li>
+<li><p>Install numpy:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ pip3 install numpy --user
+</pre></div>
+</div>
+</li>
+<li><p>Install the C subroutine library for computing the discrete Fourier transform (DFT) FFTW libraties. We strongly recommend performing the installation using the Linux package provider due to an unexpected incompatibility with the source file libraries installation:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ sudo yum -y install fftw-devel
+</pre></div>
+</div>
+</li>
+<li><p>Install gfortran and gcc compilers:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ sudo yum install gcc-gfortran
+$ sudo yum install gcc-g++
+</pre></div>
+</div>
+</li>
+<li><p>Install LAPACK libraries:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ sudo yum -y install lapack-devel
+</pre></div>
+</div>
+</li>
+<li><p>Install cython libraries:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python3 -m pip install -U cython --user
+</pre></div>
+</div>
+</li>
+<li><p>Configure your parallel environment using Open MPI, tested version 4.1.4.</p></li>
+</ol>
+<ul>
+<li><p>Go to the Open MPI <a class="reference external" href="https://www.open-mpi.org/">website</a></p></li>
+<li><p>Download the release 4.1.4: Click on openmpi-4.1.4.tar.gz release</p></li>
+<li><p>Go to your Downloads folder:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cd /home/user/Downloads
+</pre></div>
+</div>
+</li>
+<li><p>Uncompress your tar.gz file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ tar -xzvf openmpi-4.1.4.tar.gz
+</pre></div>
+</div>
+</li>
+<li><p>Here you can follow the installation instructions provided in INSTALL file inside of your openmpi-4.1.4 folder</p></li>
+<li><p>Create and environmental variable in your ~/.bascrh adding the next strings:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+</pre></div>
+</div>
+</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This path could change if you performed your Open MPI installation in a different directory than the default one.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>If you compile Open MPI using the default location you should carry out the make command with sudo privileges.</p>
+</div>
+</section>
+<section id="id2">
+<h3>Install Packages<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+<ol class="arabic simple">
+<li><p>Install Libxc from source. Skip this step if your python version is &lt; 3.10.4</p></li>
+</ol>
+<ul>
+<li><p>Go to <a class="reference external" href="https://tddft.org/programs/libxc/">libxc</a> webpage</p></li>
+<li><p>Download the libxc-5.2.3.tar.gz release</p></li>
+<li><p>Go to your Downloads folder: cd /home/user/Downloads</p></li>
+<li><p>Uncompress your tar.gz file: tar -xzvf libxc-5.2.3.tar.gz</p></li>
+<li><p>Compile Libxc:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ ./configure
+$ make
+$ make install
+</pre></div>
+</div>
+</li>
+</ul>
+<ol class="arabic simple" start="2">
+<li><p>Install Quantum Espresso package</p></li>
+</ol>
+<ul>
+<li><p>Go to <a class="reference external" href="https://gitlab.com/QEF/q-e/-/releases/qe-6.5">Q.E</a>. 6.5 release</p></li>
+<li><p>Download the Source code (<cite>tar.gz</cite>) file</p></li>
+<li><p>Uncompress your tar.gz file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ tar -xzvf q-e-qe-6.5.tar.gz
+</pre></div>
+</div>
+</li>
+<li><p>Go to your Quantum Espresso file: cd q-e-qe-6.5</p></li>
+<li><p>Make the configuration</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>All static libraries should be compiled with the -fPIC compuiler option. Add -fPIC to the configuration options.</p>
+</div>
+<ul>
+<li><p>Parallel environment:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ ./configure  MPIF90=mpif90  --with-scalapack=no -enable-openmp=no -enable-parallel=yes   CFLAGS=-fPIC FFLAGS=-fPIC try_foxflags=-fPIC
+</pre></div>
+</div>
+</li>
+</ul>
+<ol class="arabic" start="3">
+<li><p>Install the eDFTpy package:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ git clone https://gitlab.com/pavanello-research-group/edftpy.git
+$ python3 -m pip install ./edftpy --user
+</pre></div>
+</div>
+</li>
+<li><p>Install the QEpy package:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ git clone --recurse-submodules https://gitlab.com/shaoxc/qepy.git
+$ qedir=/full/path/to/your/q-e-qe-6.5/ python -m pip install -U ./qepy --user
+</pre></div>
+</div>
+</li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>qedir cannot the abreviated, must be the full path to your QE folder.</p>
+</div>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Pavanello Research Group.
+      <span class="lastupdated">Last updated on Thursday, 24 Jul 2025 15:13:26.
+      </span></p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+  
+<button onclick="topFunction()" id="btn" title="Go to top">Top</button>
+
+<script>
+var mybutton = document.getElementById("btn");
+
+window.onscroll = function() {scrollFunction()};
+
+function scrollFunction() {
+  if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+    mybutton.style.display = "block";
+  } else {
+    mybutton.style.display = "none";
+  }
+}
+
+function topFunction() {
+  document.body.scrollTop = 0;
+  document.documentElement.scrollTop = 0;
+}
+</script>
+
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
