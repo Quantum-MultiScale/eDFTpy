@@ -102,6 +102,24 @@ def optimize_density_conf(config, **kwargs):
     sprint('Final energy (eV/atom)', energy * ENERGY_CONV['Hartree']['eV']/opt.gsystem.ions.nat)
     return opt
 
+def write_cell_cut_sidecar(outfile, driver, optimizer):
+    """For a cell-cut fragment, the embedding-potential file alone (.snpy/.pp/.xsf)
+    only describes the small cut sub-box - it has no way to know where that box
+    sits inside the full periodic simulation cell. Write that placement (shift,
+    the full cell's lattice and grid shape) as a small sidecar next to outfile,
+    so a downstream reader (e.g. PySCF's cell-cut padding) can reconstruct the
+    correct periodicity instead of wrongly treating the cut box itself as
+    periodic. See edftpy/mpi/mpi.py's Graph.get_sub_index for the matching
+    index convention this shift is meant to be used with."""
+    root, _ = os.path.splitext(outfile)
+    sidecar = root + ".cellcut.npz"
+    np.savez(
+        sidecar,
+        shift = np.asarray(driver.subcell.grid.shift, dtype = int),
+        full_lattice = np.asarray(optimizer.gsystem.grid.lattice),
+        full_nr = np.asarray(optimizer.gsystem.grid.nrR, dtype = int),
+    )
+
 def optimize_embed(config, optimizer, lprint = False, mt = False, **kwargs):
     if not lprint :
         subkeys = [key for key in config if key.startswith('SUB')]
@@ -208,6 +226,7 @@ def optimize_embed(config, optimizer, lprint = False, mt = False, **kwargs):
                                 - hartree_only_global[i]
                                 + neutral_screen_potential)
                             write(outfile, potential, driver.subcell.ions, data_type = 'potential')
+                            write_cell_cut_sidecar(outfile, driver, optimizer)
                         elif config[driver.key].get("mt", False) :
                             sprint("Using Cell-cut with MT")
                             # HARTREE/PSEUDO: density placed on global cell via index, mt = global cell, cropped back to local cell via index
@@ -221,6 +240,7 @@ def optimize_embed(config, optimizer, lprint = False, mt = False, **kwargs):
                             subsystem_potential = Field(driver.grid, data=(hartree_own + pseudo_own + ke_local + xc_local))
                             potential = driver.evaluator.global_potential - subsystem_potential
                             write(outfile, potential, driver.subcell.ions, data_type = 'potential')
+                            write_cell_cut_sidecar(outfile, driver, optimizer)
 
                             if config[driver.key].get("mt_screening", False) :
                                 root, ext = os.path.splitext(outfile)
@@ -233,6 +253,7 @@ def optimize_embed(config, optimizer, lprint = False, mt = False, **kwargs):
                             subsystem_potential = -driver.total_embed(driver.density, calcType = ['V']).potential
                             potential = driver.evaluator.global_potential - subsystem_potential
                             write(outfile, potential, driver.subcell.ions, data_type = 'potential')
+                            write_cell_cut_sidecar(outfile, driver, optimizer)
                     else:
                         if mt and config[driver.key].get("mt_neutral_potential", None):
                             fname = config[driver.key]["mt_neutral_potential"]
