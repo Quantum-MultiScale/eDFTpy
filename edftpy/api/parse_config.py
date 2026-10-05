@@ -390,7 +390,7 @@ def config2total_embed(config, driver = None, optimizer = None, mt = False, **kw
                     break
         if driver.comm.rank == 0 :
             grid = Grid(lattice=grid_global.lattice, nr=grid_global.nrR, full=grid_global.full, direct = True)
-            pseudo = optimizer.gsystem.total_evaluator.funcdicts['PSEUDO'].restart(duplicate=True)
+            pseudo = optimizer.gsystem.total_evaluator.funcdicts['PSEUDO'].restart(grid=grid, ions=optimizer.gsystem.ions, duplicate=True)
             ions = driver.subcell.ions
             if has_cell_cut:
                 total_embed = driver.embed_evaluator

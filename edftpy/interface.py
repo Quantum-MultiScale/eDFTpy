@@ -178,6 +178,13 @@ def optimize_embed(config, optimizer, lprint = False, mt = False, **kwargs):
                 if driver.technique == 'OF' or driver.comm.rank == 0 or graphtopo.isub is None:
                     removed_sub = driver.total_embed.update_functional(remove = remove)
                     index = optimizer.gsystem.graphtopo.graph.get_sub_index(i, in_global = True)
+                    # own KE with gaussian/core density, as in the SCF: dke = v_T[n_I + g_I] - v_T[n_I]
+                    dke = 0.0
+                    if driver.gaussian_density is not None and 'KE' in driver.total_embed.funcdicts :
+                        ke = driver.total_embed.funcdicts['KE']
+                        dke = np.array(ke(driver.density + driver.gaussian_density, calcType=['V']).potential) \
+                            - np.array(ke(driver.density, calcType=['V']).potential)
+                        if not has_cell_cut : dke = dke[(Ellipsis, *index)]
                     if has_cell_cut:
                         graph = optimizer.gsystem.graphtopo.graph
                         grid_shape = np.array(optimizer.gsystem.grid.nrR)
@@ -225,7 +232,7 @@ def optimize_embed(config, optimizer, lprint = False, mt = False, **kwargs):
                                 + own_hartree_mt
                                 - hartree_only_global[i]
                                 + neutral_screen_potential)
-                            write(outfile, potential, driver.subcell.ions, data_type = 'potential')
+                            write(outfile, potential - dke, driver.subcell.ions, data_type = 'potential')
                             write_cell_cut_sidecar(outfile, driver, optimizer)
                         elif config[driver.key].get("mt", False) :
                             sprint("Using Cell-cut with MT")
@@ -239,7 +246,7 @@ def optimize_embed(config, optimizer, lprint = False, mt = False, **kwargs):
                             xc_local = np.array(driver.total_embed.funcdicts['XC'](driver.density, calcType=['V']).potential)
                             subsystem_potential = Field(driver.grid, data=(hartree_own + pseudo_own + ke_local + xc_local))
                             potential = driver.evaluator.global_potential - subsystem_potential
-                            write(outfile, potential, driver.subcell.ions, data_type = 'potential')
+                            write(outfile, potential - dke, driver.subcell.ions, data_type = 'potential')
                             write_cell_cut_sidecar(outfile, driver, optimizer)
 
                             if config[driver.key].get("mt_screening", False) :
@@ -252,7 +259,7 @@ def optimize_embed(config, optimizer, lprint = False, mt = False, **kwargs):
                             sprint("Using Cell-cut")
                             subsystem_potential = -driver.total_embed(driver.density, calcType = ['V']).potential
                             potential = driver.evaluator.global_potential - subsystem_potential
-                            write(outfile, potential, driver.subcell.ions, data_type = 'potential')
+                            write(outfile, potential - dke, driver.subcell.ions, data_type = 'potential')
                             write_cell_cut_sidecar(outfile, driver, optimizer)
                     else:
                         if mt and config[driver.key].get("mt_neutral_potential", None):
@@ -265,7 +272,7 @@ def optimize_embed(config, optimizer, lprint = False, mt = False, **kwargs):
                             if neutral_data is None:
                                 subsystem_potential = driver.total_embed(driver.density, calcType=['V']).potential
                                 potential = driver.evaluator.global_potential - subsystem_potential[index]
-                                write(outfile, potential, driver.subcell.ions, data_type='potential')
+                                write(outfile, potential - dke, driver.subcell.ions, data_type = 'potential')
                             else:
                                 print("Using Impurity Model: ", fname)
                                 grid_shape = np.array(optimizer.gsystem.grid.nrR)
@@ -284,11 +291,11 @@ def optimize_embed(config, optimizer, lprint = False, mt = False, **kwargs):
                                              + own_hartree_mt[index]
                                              - global_hartree_live
                                              + neutral_screen_potential)
-                                write(outfile, potential, driver.subcell.ions, data_type='potential')
+                                write(outfile, potential - dke, driver.subcell.ions, data_type = 'potential')
                         else:
                             subsystem_potential = driver.total_embed(driver.density, calcType = ['V']).potential
                             potential = driver.evaluator.global_potential - subsystem_potential[index]
-                            write(outfile, potential, driver.subcell.ions, data_type = 'potential')
+                            write(outfile, potential - dke, driver.subcell.ions, data_type = 'potential')
 
                         if mt and config[driver.key].get("mt_screening", False) :
                             root, ext = os.path.splitext(outfile)
@@ -301,6 +308,26 @@ def optimize_embed(config, optimizer, lprint = False, mt = False, **kwargs):
                             own_hartree = driver.total_embed.funcdicts['HARTREE'](driver.density, calcType=['V']).potential
                             screen_potential = hartree_only_global[i] - own_hartree[index]
                             write(screen_outfile, screen_potential, driver.subcell.ions, data_type='potential')
+
+                    # # subsystem own: v_H[n_I], v_PSEUDO[I] (MT if mt), on the embedpot grid
+                    # root, ext = os.path.splitext(outfile)
+                    # sindex = (Ellipsis, *index)
+                    # rho = np.array(driver.density)
+                    # nrank = rho.shape[0] if rho.ndim == 4 else 1
+                    # for key in ('HARTREE', 'PSEUDO'):
+                        # if key not in driver.total_embed.funcdicts : continue
+                        # if has_cell_cut and config[driver.key].get("mt", False) :
+                            # density_data = np.zeros(rho.shape[:-3] + tuple(grid_shape))
+                            # density_data[sindex] = rho
+                            # density_own = Field(global_grid, data=density_data, rank=nrank)
+                            # v = np.array(driver.total_embed.funcdicts[key](density_own, calcType=['V']).potential)[sindex]
+                            # v = Field(driver.grid, data=v, rank=v.shape[0] if v.ndim == 4 else 1)
+                        # elif has_cell_cut :
+                            # v = driver.total_embed.funcdicts[key](driver.density, calcType=['V']).potential
+                        # else :
+                            # v = np.array(driver.total_embed.funcdicts[key](driver.density, calcType=['V']).potential)[sindex]
+                            # v = Field(driver.evaluator.global_potential.grid, data=v, rank=v.shape[0] if v.ndim == 4 else 1)
+                        # write(root + '.' + key.lower() + '.snpy', v, driver.subcell.ions, data_type='potential')
                     driver.total_embed.update_functional(add = removed_sub)
     return
 
