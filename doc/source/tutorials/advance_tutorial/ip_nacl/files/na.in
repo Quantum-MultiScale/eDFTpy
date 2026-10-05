@@ -1,0 +1,14 @@
+&SYSTEM
+  tot_charge = 1
+  degauss =   0.02
+  ecutrho =   320
+  ecutwfc =   40
+  nosym = .false.
+  occupations = 'smearing'
+  smearing = 'gaussian'
+/
+&ELECTRONS
+  conv_thr =   1e-09
+  electron_maxstep = 100
+  mixing_beta =   0.7
+/

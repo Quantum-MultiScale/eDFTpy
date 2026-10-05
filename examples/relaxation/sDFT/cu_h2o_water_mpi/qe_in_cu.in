@@ -1,0 +1,17 @@
+&SYSTEM
+   ibrav            = 0
+   nat              = 19
+   ntyp             = 3
+   ecutwfc          = 40.0
+   ecutrho          = 400.0
+   nosym            = .true.
+   occupations      = 'smearing'
+   degauss          = 0.001
+   smearing         = 'gaussian'
+/
+&ELECTRONS
+   electron_maxstep = 1
+   conv_thr         = 1e-07
+/
+HUBBARD (atomic)
+U Cu-3d 4.62

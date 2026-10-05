@@ -1,0 +1,36 @@
+#!/bin/bash
+#SBATCH --time=1-10:00:00
+#SBATCH --partition=price,main
+#SBATCH --job-name=edftpy_glu
+#SBATCH --nodes=2                  # Number of nodes you require
+#SBATCH --ntasks=64                # Total # of tasks across all nodes
+#SBATCH --mem=220G                   # Real memory (RAM) required          
+#SBATCH --exclusive
+#SBATCH --output=slurm.%N.%j.out     # STDOUT output file
+#SBATCH --error=slurm.%N.%j.err      # STDERR output file (optional)
+#SBATCH --export=ALL                 # Export you current env to the job env
+#SBATCH --cluster=amareln
+
+module use /projects/community-old/modulefiles
+module load gcc/15.2.0/openssl/3.6.0-krasting
+module load intel/19.1.1
+module load gcc/14.2.0-cermak libffi/3.3-gc563
+
+PREFIX=/projectsn/mp1009_1/for_all/software_2026/edftpy_2026_2/
+source "$PREFIX/bin/activate"
+
+LIBXC_DIR=/projectsn/mp1009_1/for_all/software_2026/libxc
+export MBX_HOME=/projectsn/mp1009_1/for_all/software_2026/mbx-python-old
+export PYTHONPATH=$PYTHONPATH:${MBX_HOME}/plugins/python/mbx
+export LD_LIBRARY_PATH=$LIBXC_DIR/lib64:$LD_LIBRARY_PATH
+export LIBRARY_PATH=$LIBXC_DIR/lib64:$LIBRARY_PATH
+export CPATH=$LIBXC_DIR/include:$CPATH
+export PKG_CONFIG_PATH=$LIBXC_DIR/lib64/pkgconfig:$PKG_CONFIG_PATH
+
+NTASKS=$SLURM_NTASKS
+
+#mpirun -n $NTASKS python -m ase_relax.py > log
+mpirun -n $NTASKS python -m edftpy input.ini > log
+
+
+

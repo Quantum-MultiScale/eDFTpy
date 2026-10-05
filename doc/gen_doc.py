@@ -175,7 +175,17 @@ def gen_config_rst():
             if not isinstance(configentries[section], dict): continue
             fstr = gen_list_table(configentries[section], section, top = True)
             f.write(fstr)
-            if section == 'GSYSTEM' : continue
+            if section == 'GSYSTEM' :
+                for key, item in configentries[section].items() :
+                    if key == 'comment' : continue
+                    if key not in configentries.get('SUB', {}) :
+                        if isinstance(item, dict):
+                            for key2, item2 in item.items():
+                                if key2 == 'comment' : continue
+                                if hasattr(item2, 'level') and item2.level == 'devel' : continue
+                                fstr = "\n.. _{0}-{1}:\n\n".format(key, key2)
+                                f.write(fstr)
+                continue
             #-----------------------------------------------------------------------
             for key, item in configentries[section].items() :
                 if key == 'comment' : continue

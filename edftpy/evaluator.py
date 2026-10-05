@@ -79,7 +79,16 @@ class EmbedEvaluator(Evaluator):
         self.global_potential = None
         # Xin Chen modify
         self.global_potential_ele = None
-        # 
+        #
+        # Impurity model (charged fragments): a static neutral-reference
+        # screening potential, imported once from a separate calculation
+        # without the impurity. Set by config2embed_evaluator when a SUB
+        # has both mt=True and mt_neutral_potential configured.
+        self.neutral_screen_potential = None
+        # Impurity model: live, per-SCF-iteration Hartree-ONLY slice of global_potential,
+        # refreshed every iteration by Optimization._set_global_hartree_potential (which
+        # runs only when Optimization.has_impurity_model is set). See get_embed_potential.
+        self.global_hartree_potential = None
 
     def get_embed_potential(self, rho, gaussian_density = None, with_ke = False, gather = False, with_global = True, **kwargs):
         self.embed_potential = None
@@ -105,6 +114,18 @@ class EmbedEvaluator(Evaluator):
             if self.global_potential is not None and \
                     self.embed_potential.shape[-3:] == self.global_potential.shape[-3:] :
                 self.embed_potential += self.global_potential
+
+        if self.neutral_screen_potential is not None :
+            # Impurity model: Hartree is excluded from the KE+XC+PSEUDO own_potential
+            # computed above (config2embed_evaluator), so there is no "own" Hartree left to
+            # compensate for here - self.embed_potential already carries the full,
+            # unmodified global_potential (Hartree included) from the with_global block
+            # above. The only thing that needs replacing is that Hartree slice
+            # (global_hartree_potential, live, periodic, refreshed every iteration by
+            # Optimization._set_global_hartree_potential): swap it directly for the static
+            # reference computed once from a separate neutral calculation
+            # (neutral_screen_potential).
+            self.embed_potential += self.neutral_screen_potential - self.global_hartree_potential
 
     @property
     def ke_evaluator(self):

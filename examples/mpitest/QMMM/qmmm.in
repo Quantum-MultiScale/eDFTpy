@@ -19,6 +19,7 @@ sdft            = qmmm
 cell-file       = test.xyz
 grid-ecut       = 2700
 exc-xc          = pbe
+grid-nr = 176 176 176
 
 [SUB_KS1]
 calculator      = pwscf
@@ -27,8 +28,7 @@ kpoints-grid    = 1 1 1
 basefile        = qe_in.in
 cell-index      = 0:3
 opt-update_sleep = 1
-nprocs = 15 
-
+nprocs = 4
 
 [SUB_MM]
 calculator      = mbx
@@ -36,5 +36,5 @@ embed           = KE
 kpoints-grid    = 1 1 1
 basefile        = mbx.json
 cell-index      = 3: 
-nprocs = 1 
+nprocs = 1
 
