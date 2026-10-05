@@ -4,7 +4,7 @@
 Advanced Embedding Tutorials
 ============================
 
-This section covers advanced tutorials on density optimization, structural relaxation, and molecular dynamics.
+This section covers advanced tutorials on density optimization, structural relaxation, molecular dynamics, and ionization potentials.
 
 .. toctree::
    :maxdepth: 1
@@ -12,3 +12,4 @@ This section covers advanced tutorials on density optimization, structural relax
    advance_tutorial/opt_density
    advance_tutorial/relaxation
    advance_tutorial/molecular_dynamics
+   advance_tutorial/ionization_potential
